@@ -1,0 +1,16 @@
+# Dependencies
+verify/node_modules/
+
+# Generated screenshots / local captures
+verify/shots/
+verify/live/
+.build/shots/
+
+# Local build tooling — .build/parts are stale (assemble.py regenerates an
+# older index.html/app.html than the shipped files). Do not commit until the
+# parts are re-synced; see README.
+.build/
+
+# Logs
+*.log
+npm-debug.log*

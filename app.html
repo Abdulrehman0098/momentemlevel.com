@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark" data-accent="cyan" data-anim="on">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>MOMENTUM — Solo Leveling System V5.0</title>
 <meta name="description" content="Momentum V5.0 Apex — level up your real life like an RPG. Habits, dailies, quests, boss raids, achievements and analytics, stored entirely on your device.">
 <meta name="theme-color" content="#050508">
@@ -96,7 +96,8 @@ html[data-theme="light"] {
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; width: 100%; position: relative; }
 body {
   font-family: 'Inter', system-ui, sans-serif;
   background: var(--bg-base);
@@ -106,6 +107,9 @@ body {
   font-variant-numeric: tabular-nums;
   transition: background-color .25s ease, color .25s ease;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 body.no-scroll { overflow: hidden; }
 
@@ -334,7 +338,13 @@ html[data-theme="light"] .tab-btn { background: rgba(255, 255, 255, .6); }
   backdrop-filter: blur(20px) saturate(180%); box-shadow: 0 8px 32px rgba(0,0,0,.6);
 }
 .zoom-widget .zoom-readout { font-family: 'Orbitron', sans-serif; font-size: .58rem; min-width: 46px; text-align: center; color: var(--primary); }
-@media (max-width: 767px) { .zoom-widget { display: none; } }
+@media (max-width: 767px) {
+  .zoom-widget { display: none; }
+  /* 44x44 minimum touch targets (WCAG 2.5.5) */
+  .tab-btn, .btn-sl, .input-sl, .select-sl { min-height: 44px; }
+  .tab-btn { display: inline-flex; align-items: center; justify-content: center; }
+  .checkbox-sl { width: 44px; height: 44px; flex: 0 0 44px; }
+}
 
 /* === A11Y === */
 .skip-link { position: absolute; left: -9999px; top: 0; z-index: 10005; padding: .75rem 1rem; background: var(--primary); color: #050508; font-family: 'Orbitron', sans-serif; font-size: .7rem; border-radius: 0 0 var(--r-btn) 0; }
@@ -377,6 +387,7 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
 <header class="sticky top-0 z-50 glass-card is-static rounded-none border-b glow-pulse" id="hud">
   <div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
     <div class="flex items-center gap-3">
+      <img src="icons/icon.svg" alt="Momentum logo" width="34" height="34" class="w-[34px] h-[34px] block shrink-0" loading="eager">
       <div class="relative">
         <div class="hero-aura" id="headerAura"></div>
         <img id="headerAvatar" alt="Your hunter avatar" class="hero-avatar w-10 h-10" width="40" height="40">

@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="google-site-verification" content="LFmIag3HmysVPxsGNHEpa9rSzJool39B2L1F7OyF9Os" />
 <title>MOMENTUM — Level Up Your Real Life Like an RPG</title>
 <meta name="description" content="Momentum turns habits, dailies and one-time quests into XP, gold, ranks and boss raids. Eight hunter archetypes, 25 achievements, a calendar heatmap and analytics — all stored on your device.">
@@ -70,7 +70,8 @@ tailwind.config = {
   --r-btn: 10px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+html { scroll-behavior: smooth; scroll-padding-top: 90px; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; width: 100%; position: relative; }
 body {
   font-family: 'Inter', system-ui, sans-serif;
   background: var(--bg-base);
@@ -78,6 +79,9 @@ body {
   overflow-x: hidden;
   font-variant-numeric: tabular-nums;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
@@ -109,6 +113,7 @@ body {
 
 /* blob + float */
 .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .5; pointer-events: none; animation: blob-drift 16s ease-in-out infinite alternate; }
+section { overflow-x: clip; }
 @keyframes blob-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(30px, -40px, 0) scale(1.15); } }
 .float-slow { animation: float-slow 6s ease-in-out infinite; }
 @keyframes float-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
@@ -185,6 +190,7 @@ body {
   background: linear-gradient(120deg, #E2E8F0 12%, var(--primary) 58%, var(--secondary) 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
+.hero-main-wrap { width: var(--hero-size, 190px); max-width: 100%; margin: 0 auto; }
 .hero-avatar-ring {
   position: absolute; inset: -6px; border-radius: 50%;
   border: 2px solid var(--aura, var(--primary)); animation: ring-rotate 8s linear infinite;
@@ -195,7 +201,7 @@ body {
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity .6s cubic-bezier(.25,.46,.45,.94), transform .6s cubic-bezier(.25,.46,.45,.94); }
 .reveal.in { opacity: 1; transform: none; }
 
-.demo-frame-wrap { position: relative; overflow: hidden; border-radius: var(--r-card); }
+.demo-frame-wrap { position: relative; overflow: hidden; border-radius: var(--r-card); -webkit-overflow-scrolling: touch; }
 .demo-frame {
   width: 133.333%; height: 133.333%; border: 0; display: block;
   transform: scale(.75); transform-origin: top left; background: var(--bg-base);
@@ -252,6 +258,18 @@ body {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: rgba(5,5,8,.5); }
 ::-webkit-scrollbar-thumb { background: rgba(var(--primary-rgb), .25); border-radius: 3px; }
+
+/* === MOBILE: nav wrap + 44x44 touch targets === */
+@media (max-width: 767px) {
+  .site-nav > div { padding-left: .75rem; padding-right: .75rem; }
+  .nav-link { font-size: .5rem; padding: .35rem .5rem; letter-spacing: .1em; display: inline-flex; align-items: center; min-height: 44px; }
+  .btn-sl, .tab-btn, .input-sl, .select-sl { min-height: 44px; }
+  .checkbox-sl { width: 44px; height: 44px; flex: 0 0 44px; }
+}
+@media (max-width: 639px) {
+  .hero-main-wrap { --hero-size: 140px; }
+  #heroAvatars { min-height: 0; }
+}
 </style>
 </head>
 <body>
@@ -262,15 +280,15 @@ body {
 <div id="toast-host" aria-live="polite" aria-atomic="false"></div>
 
 <header class="site-nav" id="siteNav">
-  <div class="max-w-[1280px] mx-auto px-5 py-3 flex items-center justify-between gap-4">
+  <div class="max-w-[1280px] mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
     <a href="#top" class="flex items-center gap-3 no-underline" aria-label="Momentum home">
-      <img src="icons/icon.svg" alt="" width="34" height="34" class="w-[34px] h-[34px]">
+      <img src="icons/icon.svg" alt="Momentum logo" width="34" height="34" class="w-[34px] h-[34px] block shrink-0" loading="eager">
       <span>
         <span class="font-orbitron text-sm font-bold tracking-widest block" style="color:var(--primary)">MOMENTUM</span>
         <span class="text-[0.58rem] muted block">[SYSTEM ONLINE] // V5.0.0 APEX</span>
       </span>
     </a>
-    <nav class="hidden md:flex items-center gap-1" aria-label="Primary">
+    <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Primary">
       <a class="nav-link" href="#features" data-i18n="nav.features">Features</a>
       <a class="nav-link" href="#legends" data-i18n="nav.legends">Legends</a>
       <a class="nav-link" href="#pricing" data-i18n="nav.pricing">Pricing</a>
@@ -288,7 +306,7 @@ body {
   <div class="blob" style="width:380px;height:380px;background:rgba(59,130,246,.3);bottom:-120px;right:-60px;animation-delay:-6s" aria-hidden="true"></div>
   <div class="blob" style="width:260px;height:260px;background:rgba(139,92,246,.22);top:40%;right:22%;animation-delay:-3s" aria-hidden="true"></div>
 
-  <div class="max-w-[1280px] mx-auto grid lg:grid-cols-[1.05fr_.95fr] gap-14 items-center relative">
+  <div class="max-w-[1280px] mx-auto grid grid-cols-1 lg:grid-cols-[1.05fr_.95fr] gap-8 md:gap-14 items-center relative">
     <div>
       <p class="eyebrow mb-4" data-i18n="hero.eyebrow">Solo Leveling System · V5.0.0 Apex</p>
       <h1 class="hero-title mb-6" data-i18n="hero.title">Level Up Your Real Life Like an RPG</h1>
@@ -309,13 +327,13 @@ body {
     </div>
 
     <div class="relative min-h-[340px]" id="heroAvatars" aria-label="Hunter archetypes">
-      <div class="relative float-slow" style="width:190px;margin:0 auto">
+      <div class="relative float-slow hero-main-wrap">
         <div class="hero-aura" style="background:radial-gradient(circle,rgba(139,92,246,.6),transparent)"></div>
         <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Monarch&hair=long01&hairColor=8b5cf6&backgroundColor=050508"
-             alt="Shadow Monarch avatar" width="190" height="190" class="hero-avatar-img w-[190px] h-[190px] relative z-10" style="--aura:rgba(139,92,246,.6)">
+             alt="Shadow Monarch avatar" width="190" height="190" class="hero-avatar-img w-full h-auto relative z-10" style="--aura:rgba(139,92,246,.6)">
         <div class="hero-avatar-ring" style="--aura:rgba(139,92,246,.6)"></div>
       </div>
-      <div class="grid grid-cols-3 gap-4 mt-10 max-w-[420px] mx-auto" id="heroMini"></div>
+      <div class="grid grid-cols-3 gap-2 sm:gap-4 mt-8 sm:mt-10 max-w-[300px] sm:max-w-[420px] mx-auto" id="heroMini"></div>
     </div>
   </div>
 </section>
