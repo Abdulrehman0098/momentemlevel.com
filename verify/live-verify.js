@@ -60,8 +60,22 @@ function check(name, ok, detail) {
       const w = document.querySelector('.hero-main-wrap');
       return w ? Math.round(w.getBoundingClientRect().width) : 0;
     });
-    const expect = vp.w < 640 ? 140 : 190;
+    const expect = vp.w < 640 ? 120 : 190;
     check(vp.n + ': hero avatar ' + expect + 'px', Math.abs(hero - expect) <= 1, 'got ' + hero);
+
+    // --- perf facts (Task A) ---
+    const perf = await page.evaluate(() => {
+      const card = document.querySelector('.glass-card');
+      const cs = card ? getComputedStyle(card) : null;
+      return {
+        cardBackdrop: cs ? (cs.backdropFilter || cs.webkitBackdropFilter || 'none') : 'n/a',
+        cardWillChange: cs ? cs.willChange : 'n/a',
+      };
+    });
+    check(vp.n + ': no backdrop-filter on cards', perf.cardBackdrop === 'none',
+            'backdrop-filter=' + perf.cardBackdrop);
+    check(vp.n + ': cards promoted to compositor layer', perf.cardWillChange === 'transform',
+            'will-change=' + perf.cardWillChange);
 
     check(vp.n + ': no 4xx/failed requests, no JS errors', bad.length === 0, bad.slice(0, 4).join(' | '));
 
@@ -85,6 +99,33 @@ function check(name, ok, detail) {
   check('app.html: header logo renders on LIVE site', alogo.nw > 0 && alogo.w > 0, 'natural=' + alogo.nw + ' box=' + alogo.w);
   const aov = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
   check('app.html: no horizontal overflow', aov.s <= aov.c + 1, 'scrollW=' + aov.s + ' clientW=' + aov.c);
+
+  // --- Task C: HUD in normal flow + 12-tab touch strip ---
+  const hud = await page.evaluate(() => {
+    const hud = document.getElementById('hud');
+    const tabs = document.getElementById('tabbar');
+    const btns = tabs ? [...tabs.querySelectorAll('button')] : [];
+    const hudCs = hud ? getComputedStyle(hud) : null;
+    const tabsCs = tabs ? getComputedStyle(tabs) : null;
+    const heights = btns.map((b) => Math.round(b.getBoundingClientRect().height));
+    return {
+      hudPosition: hudCs ? hudCs.position : 'n/a',
+      tabsDisplay: tabsCs ? tabsCs.display : 'n/a',
+      tabsOverflowX: tabsCs ? tabsCs.overflowX : 'n/a',
+      tabsScrollWidth: tabs ? tabs.scrollWidth : 0,
+      tabsClientWidth: tabs ? tabs.clientWidth : 0,
+      tabCount: btns.length,
+      minTabHeight: heights.length ? Math.min(...heights) : 0,
+      navTabsContainer: !!tabs && tabs.classList.contains('nav-tabs-container'),
+    };
+  });
+  check('app.html: HUD is not sticky on mobile', hud.hudPosition !== 'sticky', 'position=' + hud.hudPosition);
+  check('app.html: tab strip is .nav-tabs-container', hud.navTabsContainer);
+  check('app.html: tab strip scrolls horizontally', hud.tabsOverflowX === 'auto' || hud.tabsOverflowX === 'scroll',
+          'overflow-x=' + hud.tabsOverflowX + ' ' + hud.tabsScrollWidth + 'px/' + hud.tabsClientWidth + 'px');
+  check('app.html: all 12 tabs present', hud.tabCount === 12, hud.tabCount + ' tabs');
+  check('app.html: tab buttons >= 44px tall', hud.minTabHeight >= 44, 'min=' + hud.minTabHeight + 'px');
+
   check('app.html: no 4xx, no JS errors', bad.length === 0, bad.slice(0, 3).join(' | '));
   await ctx.close();
 
