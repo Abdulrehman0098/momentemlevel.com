@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Momentum app icon">
+  <defs>
+    <linearGradient id="apex" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <radialGradient id="bloom" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.35"/>
+      <stop offset="70%" stop-color="#22D3EE" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#050508" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="96" fill="#050508"/>
+  <circle cx="256" cy="230" r="210" fill="url(#bloom)"/>
+
+  <!-- hexagon frame -->
+  <path d="M256 46 L438 151 L438 361 L256 466 L74 361 L74 151 Z"
+        fill="rgba(10,10,18,0.9)" stroke="url(#apex)" stroke-width="8" stroke-linejoin="round"/>
+
+  <!-- M monogram -->
+  <g filter="url(#glow)">
+    <path d="M150 352 L150 178 L204 178 L256 258 L308 178 L362 178 L362 352 L316 352 L316 244 L256 330 L196 244 L196 352 Z"
+          fill="url(#apex)"/>
+  </g>
+
+  <!-- rank ticks: E -> S -->
+  <g fill="#FBBF24" opacity="0.85">
+    <rect x="176" y="386" width="24" height="8" rx="4"/>
+    <rect x="212" y="386" width="24" height="8" rx="4"/>
+    <rect x="248" y="386" width="24" height="8" rx="4"/>
+    <rect x="284" y="386" width="24" height="8" rx="4"/>
+    <rect x="320" y="386" width="24" height="8" rx="4" opacity="0.45"/>
+  </g>
+</svg>
