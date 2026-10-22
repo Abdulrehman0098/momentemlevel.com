@@ -10,10 +10,13 @@
 |---|---|---|
 | App — 12 tabs, every action | `node verify/verify-v5.js` | **126 / 126 pass** |
 | Landing + legal pages | `node verify/verify-landing.js` | **66 / 66 pass** |
+| Mobile layout, 5 viewports | `node verify/mobile-verify.js` | **73 / 73 pass** |
+| Deployed site (live) | `node verify/live-verify.js` | **13 / 13 pass** |
 
-Both numbers come from real Chromium runs against the files on disk, not from
-inspection. Every suite starts its own static server and exits non-zero on the
-first failure.
+All four come from real Chromium runs, not from inspection. The first three
+start their own static server against the files on disk; `live-verify.js` hits
+the deployed domain and exits non-zero on the first failure. Every suite
+starts its own static server and exits non-zero on the first failure.
 
 ---
 
@@ -28,13 +31,18 @@ momentum-site\
 ├── sw.js                         service worker: shell cache-first, avatars network-first
 ├── privacy.html                  privacy policy
 ├── terms.html                    terms of service
-├── icons\icon.svg                app icon source (PNG exports still to generate)
+├── icons\icon.svg                app icon source
+├── icons\icon-192.png            apple-touch-icon + manifest (generated)
+├── icons\icon-512.png            maskable manifest icon (generated)
 ├── index.v4.0.5.backup.html      previous release — the rollback if anything regresses
 ├── verify\
 │   ├── verify-v5.js              126-check suite for app.html
 │   ├── verify-landing.js         66-check suite for index/privacy/terms
+│   ├── mobile-verify.js          73-check mobile/layout suite, 5 viewports
+│   ├── live-verify.js            13-check suite against the deployed domain
+│   ├── clip-check.js             flags elements crossing the viewport edge
 │   └── shots-v5.js               screenshots of every tab → .build/shots/
-└── .build\
+└── .build\                        (gitignored — see Known gaps)
     ├── assemble.py               concatenates parts → app.html + index.html
     └── parts\                    01…09 for the app, l1…l3 for the landing page
 ```
@@ -72,6 +80,13 @@ node verify-landing.js
 
 `app.html` is assembled from parts, so a ~158 KB file can be edited in pieces
 without ever emitting a truncated write.
+
+> **Do not run `assemble.py` until the parts are re-synced.** `.build/parts/` is
+> stale: assembling it today writes an `index.html`/`app.html` that is ~67/25
+> diff lines *behind* the shipped files, which would silently revert the mobile
+> fixes, the favicon paths and the viewport lock. `.build/` is gitignored for
+> that reason. Either regenerate the parts from the current files, or edit
+> `index.html` / `app.html` directly and delete the parts workflow.
 
 ```bash
 cd D:\src\momentum-site\.build
@@ -169,14 +184,40 @@ regression fails the suite rather than shipping.
 
 ---
 
+## Mobile
+
+The viewport is locked against pinch-zoom and elastic scaling on every page:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+```
+
+`html, body` carry `touch-action: manipulation`, `-webkit-text-size-adjust: 100%`
+and `overflow-x: hidden`, and each interactive control gets a 44px minimum touch
+target below 768px (WCAG 2.5.5).
+
+Below 768px the header stacks — brand row, then a wrapped nav row — so the four
+section links never collide with the MOMENTUM title. Below 640px the hero avatar
+drops from 190px to 140px via the `--hero-size` custom property.
+
+`verify/mobile-verify.js` asserts all of this at 375 / 360 / 390 / 768 / 1280
+widths, and `live-verify.js` re-checks it against the deployed domain.
+
+---
+
 ## Known gaps
 
-- **`icons/icon-192.png` and `icon-512.png` are not generated.** The manifests
-  reference them; until they exist you get a 404 and the SVG favicon fallback.
+- **`icons/` was missing from the repo entirely.** `index.html`, `app.html`,
+  `privacy.html` and `terms.html` all pointed at `icons/icon.svg`, but only the
+  root `icon.svg` was ever committed — so the header logo and the SVG favicon
+  404'd on every page of the live site. The directory is now committed, along
+  with `icon-192.png` / `icon-512.png` (rendered from the SVG with headless
+  Chrome, since Inkscape is not installed here):
   ```bash
-  inkscape icons/icon.svg -w 192 -h 192 -o icons/icon-192.png
-  inkscape icons/icon.svg -w 512 -h 512 -o icons/icon-512.png
+  # equivalent to: inkscape icons/icon.svg -w 192 -h 192 -o icons/icon-192.png
   ```
+- **`.build/parts/` is stale and gitignored.** `assemble.py` would regenerate a
+  page older than the shipped one — see *Editing the app* above.
 - **The landing page's stat band and testimonials are illustrative** and the page
   says so in place. Replace them with measured numbers, or delete the section,
   before a public launch — presenting invented figures as real is false
@@ -187,3 +228,8 @@ regression fails the suite rather than shipping.
   that, instead of linking nowhere.
 - **Cloud sync does not exist.** The app's Account section is a disabled button
   for the same reason.
+- **Cloudflare's analytics beacon is blocked by the site CSP.** Cloudflare
+  injects `static.cloudflareinsights.com/beacon.min.js` at the edge and the
+  CSP's `script-src` does not list it, so the request fails on every page. It is
+  harmless (the site ships no telemetry) but it is why `live-verify.js` filters
+  that host rather than reporting it as a failure.
