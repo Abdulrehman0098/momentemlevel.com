@@ -287,11 +287,39 @@ section { overflow-x: clip; }
 ::-webkit-scrollbar-thumb { background: rgba(var(--primary-rgb), .25); border-radius: 3px; }
 
 /* === MOBILE: nav wrap + 44x44 touch targets === */
+/* Task A.3: TV / large desktop (>1920px).
+   Content is capped at 1280px, so on a 4K panel it sits in a narrow column with
+   laptop-sized type and looks sparse and misproportioned. Scale the display
+   type and the vertical rhythm to the panel; the container cap stays, which
+   keeps line lengths readable. */
+@media (min-width: 1920px) {
+  .hero-title { font-size: clamp(3rem, 4.2vw, 5.5rem); }
+  .section-title { font-size: clamp(1.8rem, 2.4vw, 2.6rem); }
+  .lead { font-size: 1.15rem; }
+  .hero-avatar-img { border-width: 4px; }
+}
+
 @media (max-width: 767px) {
   .site-nav > div { padding-left: .75rem; padding-right: .75rem; }
   .nav-link { font-size: .5rem; padding: .35rem .5rem; letter-spacing: .1em; display: inline-flex; align-items: center; min-height: 44px; }
   .btn-sl, .tab-btn, .input-sl, .select-sl { min-height: 44px; }
   .checkbox-sl { width: 44px; height: 44px; flex: 0 0 44px; }
+}
+/* Task B: the live demo frame.
+   Desktop uses width/height 133.333% + scale(.75) to fit the 1600px app into a
+   narrower card. That only works on a wide viewport — on a phone it makes the
+   frame 133% of an already-narrow wrapper and scales it down into distortion.
+   Below 768px the iframe fills its wrapper at native size instead, which is
+   also what a phone actually wants. !important is required because the wrapper
+   carries an inline height:min(78vh,760px). */
+@media (max-width: 767px) {
+  .demo-frame-wrap { height: 600px !important; max-height: 80vh !important; }
+  .demo-frame {
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
 }
 @media (max-width: 639px) {
   /* 120px (was 190px): at 375px wide a 190px avatar plus the 420px mini grid
@@ -470,7 +498,7 @@ section { overflow-x: clip; }
       <h2 class="section-title mb-3">What testers said</h2>
       <p class="lead text-sm max-w-[58ch] mx-auto">Composite feedback from early test builds. Names are pseudonymous.</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="testimonialGrid"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="testimonialGrid"></div>
   </div>
 </section>
 
@@ -482,7 +510,7 @@ section { overflow-x: clip; }
       <h2 class="section-title mb-3" data-i18n="pricing.title">Free forever, or unlock the extras</h2>
       <p class="lead text-sm max-w-[58ch] mx-auto">The core loop is free and unlimited. Paid tiers add cosmetics and cloud sync when it ships.</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-start" id="pricingGrid"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start" id="pricingGrid"></div>
     <p class="text-center text-[0.7rem] muted mt-6">Prices are placeholders for this build. Checkout is not wired up.</p>
   </div>
 </section>

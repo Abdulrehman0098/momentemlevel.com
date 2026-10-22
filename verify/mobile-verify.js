@@ -40,7 +40,9 @@ const VIEWPORTS = [
   { name: 'Android-360',  w: 360,  h: 800, mobile: true  },
   { name: 'iPhone-14',   w: 390,  h: 844, mobile: true  },
   { name: 'iPad-mini',   w: 768,  h: 1024, mobile: false },
+  { name: 'iPad-land',   w: 1024, h: 768, mobile: false },
   { name: 'Desktop',     w: 1280, h: 900, mobile: false },
+  { name: 'TV-4K',       w: 2560, h: 1440, mobile: false },
 ];
 
 (async () => {
@@ -188,10 +190,69 @@ const VIEWPORTS = [
       const f = document.getElementById('demoFrame');
       if (!f) return null;
       const r = f.getBoundingClientRect();
-      return { w: Math.round(r.width), h: Math.round(r.height), src: f.getAttribute('src') };
+      const wrap = f.closest('.demo-frame-wrap');
+      const wr = wrap ? wrap.getBoundingClientRect() : null;
+      return {
+        w: Math.round(r.width), h: Math.round(r.height), src: f.getAttribute('src'),
+        transform: getComputedStyle(f).transform,
+        wrapW: wr ? Math.round(wr.width) : 0,
+        wrapH: wr ? Math.round(wr.height) : 0,
+      };
     });
     check(vp.name + ': live demo iframe present + sized', !!demo && demo.w > 0 && demo.h > 0,
             demo ? demo.w + 'x' + demo.h : 'missing');
+
+    // --- Task B: iframe scaling per device ---
+    if (demo) {
+      if (vp.w < 768) {
+        // Fluid native size: no transform, frame fills the wrapper.
+        check(vp.name + ': demo iframe is fluid (no scale)', demo.transform === 'none',
+                'transform=' + demo.transform);
+        check(vp.name + ': demo iframe fills wrapper width', Math.abs(demo.w - demo.wrapW) <= 2,
+                'frame=' + demo.w + ' wrapper=' + demo.wrapW);
+        check(vp.name + ': demo wrapper height capped', demo.wrapH <= Math.round(vp.h * 0.8) + 1,
+                'wrapH=' + demo.wrapH + ' 80vh=' + Math.round(vp.h * 0.8));
+      } else {
+        // Desktop keeps the 75% scale trick.
+        check(vp.name + ': demo iframe scaled to 75%', /matrix\(0\.75/.test(demo.transform),
+                demo.transform);
+      }
+    }
+
+    // --- Task A.2: grid columns per breakpoint ---
+    const grids = await page.evaluate(() => {
+      const cols = (sel) => {
+        const el = document.querySelector(sel);
+        return el ? getComputedStyle(el).gridTemplateColumns.split(' ').length : -1;
+      };
+      return {
+        feature: cols('#featureGrid'),
+        pricing: cols('#pricingGrid'),
+        testimonial: cols('#testimonialGrid'),
+        stat: cols('#statBand'),
+      };
+    });
+    const expect = (n, wide, mid, narrow) => vp.w >= 1024 ? wide : (vp.w >= 768 ? mid : narrow);
+    check(vp.name + ': featureGrid columns=' + grids.feature, grids.feature === expect(1, 3, 2, 1),
+            'want ' + expect(1, 3, 2, 1));
+    check(vp.name + ': pricingGrid columns=' + grids.pricing, grids.pricing === expect(1, 3, 2, 1),
+            'want ' + expect(1, 3, 2, 1));
+    check(vp.name + ': testimonialGrid columns=' + grids.testimonial, grids.testimonial === expect(1, 3, 2, 1),
+            'want ' + expect(1, 3, 2, 1));
+
+    // --- Task A.3: TV / 4K must not distort or overflow ---
+    if (vp.w > 1920) {
+      check(vp.name + ': TV viewport has no horizontal overflow', noOverflow,
+              'scrollW=' + overflow.scrollW + ' clientW=' + overflow.clientW);
+      const tv = await page.evaluate(() => {
+        const h1 = document.querySelector('.hero-title');
+        const r = h1 ? h1.getBoundingClientRect() : null;
+        return { titleW: r ? Math.round(r.width) : 0, titleScroll: h1 ? h1.scrollWidth : 0 };
+      });
+      check(vp.name + ': TV hero title scaled up and not clipped',
+              tv.titleW > 0 && tv.titleScroll <= tv.titleW + 2,
+              'w=' + tv.titleW + ' scrollW=' + tv.titleScroll);
+    }
 
     // --- page errors ---
     check(vp.name + ': no JS/console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
