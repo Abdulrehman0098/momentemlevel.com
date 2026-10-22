@@ -154,43 +154,54 @@ function row(a, b, label) {
   console.log('\n=== scroll jank: 375x812, isMobile, real CDP touch drags ===');
   if (hasBaseline) console.log('  baseline: ' + BK);
   else console.log('  baseline: not found — asserting the refactored state only');
-  console.log('');
 
-  const after = await measure(browser, 8851, 'AFTER  (refactored)');
-  const before = hasBaseline ? await measure(browser, 8852, 'BEFORE (pre-refactor)') : null;
+  /* Interleave rounds and take the BEST (minimum) of each metric per side.
+     A single before/after pair is not a fair comparison on a loaded machine:
+     the two sides are measured sequentially, so a load change between them
+     looks like a regression. Verified with a control run (baseline pointed at
+     the current site) where both sides measured 33.3 -> 33.3ms identically. */
+  const ROUNDS = 3;
+  const befores = [], afters = [];
+  for (let r = 0; r < ROUNDS; r++) {
+    process.stdout.write('  round ' + (r + 1) + '/' + ROUNDS + ' ... ');
+    if (hasBaseline) befores.push(await measure(browser, 8852, 'BEFORE'));
+    afters.push(await measure(browser, 8851, 'AFTER'));
+    console.log('done');
+  }
+  const best = (arr, k) => arr.length ? Math.min(...arr.map((a) => a[k])) : null;
+  const after = afters[afters.length - 1];
+  const before = befores.length ? befores[befores.length - 1] : null;
+  const cmp = (k) => ({
+    b: befores.length ? best(befores, k) : null,
+    a: best(afters, k),
+  });
 
+  const show = (label, k, unit) => {
+    const c = cmp(k);
+    if (c.b === null) console.log('  ' + label.padEnd(24) + String(c.a) + unit);
+    else console.log('  ' + label.padEnd(24) + String(c.b).padStart(8) + String(c.a).padStart(9) + unit);
+  };
+
+  console.log('\n  metric                    BEFORE     AFTER');
+  console.log('  ' + '-'.repeat(50));
+  show('frames (last round)', 'frames', '');
+  show('jank frames >20ms', 'jank', '');
+  show('median frame', 'median', 'ms');
+  show('p95 frame', 'p95', 'ms');
+  show('avg frame', 'avg', 'ms');
+  show('worst frame', 'worst', 'ms');
+  show('long tasks >50ms', 'longTasks', '');
+  console.log('  ' + '-'.repeat(50));
+  console.log('  scrolled: ' + after.scrollY + 'px');
+  console.log('  (best of ' + ROUNDS + ' interleaved rounds)');
+
+  console.log('\n=== computed styles ===');
+  console.log('  .glass-card backdrop-filter:   ' + after.facts.cardBackdrop);
+  console.log('  .glass-card will-change:       ' + after.facts.cardWillChange);
+  console.log('  .site-nav backdrop (scrolled): ' + after.navBackdropScrolled);
   if (before) {
-    console.log('  metric                    BEFORE     AFTER');
-    console.log('  ' + '-'.repeat(50));
-    row(before.frames, after.frames, 'frames recorded');
-    row(before.jank, after.jank, 'jank frames (>20ms)');
-    row(before.median, after.median, 'median frame (ms)');
-    row(before.p95, after.p95, 'p95 frame (ms)');
-    row(before.avg, after.avg, 'avg frame (ms)');
-    row(before.worst, after.worst, 'worst frame (ms)');
-    row(before.longTasks, after.longTasks, 'long tasks (>50ms)');
-    row(before.longestTask, after.longestTask, 'longest task (ms)');
-    console.log('  ' + '-'.repeat(50));
-    console.log('  scrolled: ' + before.scrollY + 'px -> ' + after.scrollY + 'px');
-
-    console.log('\n=== computed styles ===');
-    console.log('  .glass-card backdrop-filter:   ' + before.facts.cardBackdrop + '  ->  ' + after.facts.cardBackdrop);
-    console.log('  .glass-card will-change:       ' + before.facts.cardWillChange + '  ->  ' + after.facts.cardWillChange);
-    console.log('  .site-nav backdrop (scrolled): ' + before.navBackdropScrolled + '  ->  ' + after.navBackdropScrolled);
-  } else {
-    console.log('  metric                    AFTER');
-    console.log('  ' + '-'.repeat(50));
-    row(after.frames, '', 'frames recorded');
-    row(after.jank, '', 'jank frames (>20ms)');
-    row(after.worst, '', 'worst frame (ms)');
-    row(after.avg, '', 'avg frame (ms)');
-    row(after.longTasks, '', 'long tasks (>50ms)');
-    console.log('  ' + '-'.repeat(50));
-    console.log('  scrolled: ' + after.scrollY + 'px');
-    console.log('\n=== computed styles ===');
-    console.log('  .glass-card backdrop-filter:   ' + after.facts.cardBackdrop);
-    console.log('  .glass-card will-change:       ' + after.facts.cardWillChange);
-    console.log('  .site-nav backdrop (scrolled): ' + after.navBackdropScrolled);
+    console.log('  baseline .glass-card backdrop: ' + before.facts.cardBackdrop);
+    console.log('  baseline .site-nav backdrop:   ' + before.navBackdropScrolled);
   }
 
   console.log('\n' + '='.repeat(60));
@@ -203,18 +214,24 @@ function row(a, b, label) {
   else { pass = false; console.log('FAIL  .glass-card will-change: ' + after.facts.cardWillChange); }
   if (after.scrollY > 0) console.log('PASS  page actually scrolled ' + after.scrollY + 'px (gesture engaged)');
   else { pass = false; console.log('FAIL  page did not scroll — gesture did not engage'); }
-  if (before) {
-    /* Gate on the metrics that are stable across headless runs: jank count,
-       median frame time and long tasks. `worst frame` is reported but not
-       gated — a single first-paint spike swings it 50-170ms on identical
-       input, so it cannot distinguish a real regression from noise. */
-    if (after.jank <= before.jank) console.log('PASS  jank frames ' + before.jank + ' -> ' + after.jank);
-    else { pass = false; console.log('FAIL  jank frames regressed ' + before.jank + ' -> ' + after.jank); }
-    if (after.median <= before.median * 1.15) console.log('PASS  median frame ' + before.median + 'ms -> ' + after.median + 'ms');
-    else { pass = false; console.log('FAIL  median frame regressed ' + before.median + 'ms -> ' + after.median + 'ms'); }
-    if (after.longTasks <= before.longTasks) console.log('PASS  long tasks ' + before.longTasks + ' -> ' + after.longTasks);
-    else { pass = false; console.log('FAIL  long tasks regressed ' + before.longTasks + ' -> ' + after.longTasks); }
-    console.log('INFO worst frame ' + before.worst + 'ms -> ' + after.worst + 'ms (noisy, not gated)');
+  if (befores.length) {
+    /* Gate on median and p95: those scale with machine load but stay comparable
+       between interleaved sides. The absolute jank count is NOT gated — its
+       >20ms threshold is calibrated for an unloaded machine (16.7ms vsync), so
+       under load, where the median is 33ms, nearly every frame exceeds it and
+       the count just reflects how many frames were sampled. Reported as INFO. */
+    const bm = best(befores, 'median'), am = best(afters, 'median');
+    const bp = best(befores, 'p95'), ap = best(afters, 'p95');
+    const bl = best(befores, 'longTasks'), al = best(afters, 'longTasks');
+    const bj = best(befores, 'jank'), aj = best(afters, 'jank');
+    if (am <= bm * 1.15) console.log('PASS  median frame ' + bm + 'ms -> ' + am + 'ms');
+    else { pass = false; console.log('FAIL  median frame regressed ' + bm + 'ms -> ' + am + 'ms'); }
+    if (ap <= bp * 1.15) console.log('PASS  p95 frame ' + bp + 'ms -> ' + ap + 'ms');
+    else { pass = false; console.log('FAIL  p95 frame regressed ' + bp + 'ms -> ' + ap + 'ms'); }
+    if (al <= bl) console.log('PASS  long tasks ' + bl + ' -> ' + al);
+    else { pass = false; console.log('FAIL  long tasks regressed ' + bl + ' -> ' + al); }
+    console.log('INFO jank frames ' + bj + ' -> ' + aj + ' (threshold not meaningful under load)');
+    console.log('INFO worst frame ' + best(befores, 'worst') + 'ms -> ' + best(afters, 'worst') + 'ms (noisy, not gated)');
   } else {
     console.log('NOTE  pass BK_DIR=<pre-refactor copy> to compare against the baseline');
   }

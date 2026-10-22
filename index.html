@@ -938,6 +938,11 @@ function wireFaq() {
     setPaused(false);
   }
   function touchStart() {
+    /* Guard: touchmove fires for every pixel of a drag. Re-writing
+       animationPlayState on each one forces a style invalidation per event,
+       which measured as a doubling of the median frame time. Pausing is
+       idempotent, so do it once and let the remaining moves no-op. */
+    if (busy) return;
     busy = true;
     setPaused(true);
   }

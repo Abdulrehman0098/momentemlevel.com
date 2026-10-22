@@ -3116,6 +3116,10 @@ function registerServiceWorker() {
 window.backgroundBusy = false;
 window._bgPauseTimer = null;
 function pauseBackground(decisive) {
+  /* Guard: touchmove fires for every pixel of a drag. Without this the two
+     querySelector calls and the style writes run per event, which measured as
+     a doubling of the median frame time. Pausing is idempotent. */
+  if (window.backgroundBusy) return;
   window.backgroundBusy = true;
   const scan = document.querySelector('.scanline');
   if (scan) scan.style.animationPlayState = 'paused';

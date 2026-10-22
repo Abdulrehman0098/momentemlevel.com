@@ -10,13 +10,22 @@
 |---|---|---|
 | App — 12 tabs, every action | `node verify/verify-v5.js` | **126 / 126 pass** |
 | Landing + legal pages | `node verify/verify-landing.js` | **66 / 66 pass** |
-| Mobile layout, 5 viewports | `node verify/mobile-verify.js` | **73 / 73 pass** |
-| Deployed site (live) | `node verify/live-verify.js` | **13 / 13 pass** |
+| Mobile + cross-device layout | `node verify/mobile-verify.js` | **133 / 133 pass** |
+| Scroll jank (before vs after) | `node verify/perf-verify.js` | **PASS** |
+| Deployed site (live) | `node verify/live-verify.js` | **22 / 22 pass** |
 
-All four come from real Chromium runs, not from inspection. The first three
+All five come from real Chromium runs, not from inspection. The first four
 start their own static server against the files on disk; `live-verify.js` hits
-the deployed domain and exits non-zero on the first failure. Every suite
-starts its own static server and exits non-zero on the first failure.
+the deployed domain. Every suite exits non-zero on the first failure.
+
+`mobile-verify.js` covers 375 / 360 / 390 (phones), 768 / 1024 (tablet portrait
+and landscape), 1280 (desktop) and 2560 (TV/4K), asserting logo render, nav/brand
+overlap, horizontal overflow, touch-target size, hero avatar sizing, demo-iframe
+scaling, grid column counts per breakpoint and the TV viewport.
+
+`perf-verify.js` measures scroll jank with real CDP touch drags against a
+pre-refactor copy. Point `BK_DIR` at one to get the before/after comparison; it
+asserts the refactored state standalone otherwise.
 
 ---
 
@@ -34,17 +43,24 @@ momentum-site\
 ├── icons\icon.svg                app icon source
 ├── icons\icon-192.png            apple-touch-icon + manifest (generated)
 ├── icons\icon-512.png            maskable manifest icon (generated)
-├── index.v4.0.5.backup.html      previous release — the rollback if anything regresses
 ├── verify\
 │   ├── verify-v5.js              126-check suite for app.html
 │   ├── verify-landing.js         66-check suite for index/privacy/terms
-│   ├── mobile-verify.js          73-check mobile/layout suite, 5 viewports
-│   ├── live-verify.js            13-check suite against the deployed domain
+│   ├── mobile-verify.js          133-check cross-device suite, 7 viewports
+│   ├── perf-verify.js            scroll-jank suite (BK_DIR = pre-refactor copy)
+│   ├── live-verify.js            22-check suite against the deployed domain
 │   ├── clip-check.js             flags elements crossing the viewport edge
 │   └── shots-v5.js               screenshots of every tab → .build/shots/
 └── .build\                        (gitignored — see Known gaps)
     ├── assemble.py               concatenates parts → app.html + index.html
     └── parts\                    01…09 for the app, l1…l3 for the landing page
+```
+
+`index.v4.0.5.backup.html` was removed from the repo (commit `1bd704a`) — the
+previous release is still recoverable from git history if a rollback is needed:
+
+```bash
+git show 12aa778^:index.html > index.v4.0.5.backup.html
 ```
 
 There is no npm install, no bundler and no framework. `app.html` carries all its
