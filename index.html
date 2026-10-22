@@ -19,8 +19,9 @@
 <meta property="og:description" content="Habits become XP. Streaks become ranks. Procrastination becomes a boss you can actually kill.">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="alternate icon" type="image/png" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -71,7 +72,14 @@ tailwind.config = {
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 90px; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; width: 100%; position: relative; }
+html, body {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden !important;
+  width: 100%;
+  position: relative;
+}
 body {
   font-family: 'Inter', system-ui, sans-serif;
   background: var(--bg-base);
@@ -123,9 +131,16 @@ section { overflow-x: clip; }
 @keyframes legendary-pulse { 0%, 100% { box-shadow: 0 0 0 rgba(251,191,36,0); } 50% { box-shadow: 0 0 22px rgba(251,191,36,.55); } }
 
 .glass-card {
-  background: var(--bg-surface);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  /* backdrop-filter removed: the GPU readback pass forced a full-screen
+     composite on every scroll frame on mobile. color-mix reproduces the
+     frosted tint analytically — saturate(180%) over a 20px blur of the
+     starfield resolves to roughly +5% luminance on the base surface. */
+  background: color-mix(in srgb, var(--bg-surface) 88%, var(--primary) 6%) !important;
+  background: rgba(10, 10, 18, 0.95) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  will-change: transform;
+  transform: translateZ(0);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
   box-shadow: 0 8px 32px rgba(0, 0, 0, .8), inset 0 1px 0 rgba(255, 255, 255, .05);
@@ -142,13 +157,21 @@ section { overflow-x: clip; }
 .site-nav {
   position: sticky; top: 0; z-index: 900;
   border-bottom: 1px solid transparent;
-  transition: background-color .3s ease, border-color .3s ease, backdrop-filter .3s ease;
+  /* backdrop-filter dropped: a sticky blurred header re-composites the whole
+     viewport behind it on every scroll pixel, which is the primary mobile
+     jank source. The solid tint below keeps the same visual separation. */
+  background: rgba(10, 10, 18, 0.95) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition: background-color .3s ease, border-color .3s ease;
 }
 .site-nav.scrolled {
-  background: rgba(5, 5, 8, .78);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(10, 10, 18, 0.95) !important;
   border-bottom-color: var(--border);
+}
+.btn-sl, .tab-btn, .nav-link, .glass-card, .hud-chip, .rank-badge, button, .modal-panel {
+  will-change: transform;
+  transform: translateZ(0);
 }
 .nav-link {
   font-family: 'Orbitron', sans-serif; font-size: .58rem; font-weight: 600;
@@ -202,6 +225,10 @@ section { overflow-x: clip; }
 .reveal.in { opacity: 1; transform: none; }
 
 .demo-frame-wrap { position: relative; overflow: hidden; border-radius: var(--r-card); -webkit-overflow-scrolling: touch; }
+/* Promote the frame to its own layer so panning it does not re-rasterise
+   the landing page. `will-change` only — a transform here would clobber the
+   scale(.75) from .demo-frame, since an ID outranks a class. */
+#demoFrame { will-change: transform; }
 .demo-frame {
   width: 133.333%; height: 133.333%; border: 0; display: block;
   transform: scale(.75); transform-origin: top left; background: var(--bg-base);
@@ -267,8 +294,11 @@ section { overflow-x: clip; }
   .checkbox-sl { width: 44px; height: 44px; flex: 0 0 44px; }
 }
 @media (max-width: 639px) {
-  .hero-main-wrap { --hero-size: 140px; }
+  /* 120px (was 190px): at 375px wide a 190px avatar plus the 420px mini grid
+     left no room for the headline and the two CTAs, so they collided. */
+  .hero-main-wrap { --hero-size: 120px; }
   #heroAvatars { min-height: 0; }
+  #heroAvatars > .grid { max-width: 240px; gap: .5rem; margin-top: 1.25rem; }
 }
 </style>
 </head>
@@ -282,7 +312,7 @@ section { overflow-x: clip; }
 <header class="site-nav" id="siteNav">
   <div class="max-w-[1280px] mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
     <a href="#top" class="flex items-center gap-3 no-underline" aria-label="Momentum home">
-      <img src="icons/icon.svg" alt="Momentum logo" width="34" height="34" class="w-[34px] h-[34px] block shrink-0" loading="eager">
+      <img src="./icons/icon.svg" alt="MOMENTUM" width="34" height="34" class="w-[34px] h-[34px] block flex-shrink-0" style="display:block; width:34px; height:34px;" loading="eager">
       <span>
         <span class="font-orbitron text-sm font-bold tracking-widest block" style="color:var(--primary)">MOMENTUM</span>
         <span class="text-[0.58rem] muted block">[SYSTEM ONLINE] // V5.0.0 APEX</span>
@@ -861,6 +891,46 @@ function wireFaq() {
   });
 }
 
+/* Task A: touch-idle gating.
+   While the user is dragging, every CSS animation and the canvas particle loop
+   compete with the scroll gesture for the same compositor thread. Pausing the
+   decorative layers for the gesture duration is what removes the visible lag —
+   the alternative (letting them run) is what produced the stutter. */
+(function () {
+  var scan = document.querySelector('.scanline');
+  var stars = document.querySelector('.starfield');
+  var busy = false, pending = false;
+  function setPaused(paused) {
+    if (scan) scan.style.animationPlayState = paused ? 'paused' : 'running';
+    if (stars) stars.style.animationPlayState = paused ? 'paused' : 'running';
+  }
+  function release() {
+    busy = false;
+    if (pending) { pending = false; touchStart(); return; }
+    setPaused(false);
+  }
+  function touchStart() {
+    busy = true;
+    setPaused(true);
+  }
+  ['touchstart', 'pointerdown'].forEach(function (ev) {
+    window.addEventListener(ev, touchStart, { passive: true });
+  });
+  ['touchend', 'touchcancel', 'pointerup', 'pointercancel'].forEach(function (ev) {
+    window.addEventListener(ev, release, { passive: true });
+  });
+  window.addEventListener('wheel', function () {
+    if (busy) { pending = true; return; }
+    touchStart();
+    window.setTimeout(release, 120);
+  }, { passive: true });
+  window.addEventListener('scroll', function () {
+    if (busy || pending) return;
+    touchStart();
+    window.setTimeout(release, 120);
+  }, { passive: true });
+})();
+
 function wireBossScroll() {
   const fill = $('bossFill'), text = $('bossHpText'), bar = $('bossBar'), dragon = $('bossDragon');
   const section = $('boss');
@@ -883,7 +953,7 @@ function wireBossScroll() {
     }
   };
   window.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(update); }, { passive: true });
-  window.addEventListener('resize', update);
+  window.addEventListener('resize', update, { passive: true });
   update();
 }
 

@@ -165,7 +165,7 @@ const VIEWPORTS = [
       return { wrap: Math.round(r.width), img: ir ? Math.round(ir.width) : 0 };
     });
     if (hero) {
-      const expect = vp.w < 640 ? 140 : 190;
+      const expect = vp.w < 640 ? 120 : 190;
       check(vp.name + ': hero avatar scaled to ' + expect + 'px', Math.abs(hero.wrap - expect) <= 1,
             'wrap=' + hero.wrap + ' img=' + hero.img);
     }

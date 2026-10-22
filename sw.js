@@ -4,7 +4,7 @@
 const CACHE = 'momentum-v5';
 const AVATAR_CACHE = 'momentum-avatars-v5';
 const OFFLINE_HTML = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">' +
-  '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+  '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">' +
   '<title>Offline - MOMENTUM</title></head>' +
   '<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;' +
   'background:#050508;color:#E2E8F0;font-family:system-ui,sans-serif;text-align:center">' +
@@ -19,7 +19,9 @@ const SHELL = [
   './manifest.json',
   './privacy.html',
   './terms.html',
-  './icons/icon.svg'
+  './icons/icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {

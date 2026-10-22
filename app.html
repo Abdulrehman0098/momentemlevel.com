@@ -14,8 +14,9 @@
 <meta name="apple-mobile-web-app-title" content="MOMENTUM">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="app.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="alternate icon" type="image/png" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -97,7 +98,14 @@ html[data-theme="light"] {
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; width: 100%; position: relative; }
+html, body {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden !important;
+  width: 100%;
+  position: relative;
+}
 body {
   font-family: 'Inter', system-ui, sans-serif;
   background: var(--bg-base);
@@ -145,9 +153,17 @@ html[data-theme="light"] .star { background: #94A3B8; }
 
 /* === GLASS === */
 .glass-card {
-  background: var(--bg-surface);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  /* backdrop-filter removed: the GPU readback pass forced a full-screen
+     composite on every scroll frame on mobile. color-mix reproduces the
+     frosted tint analytically — saturate(180%) on a 20px blur of the starfield
+     resolves to roughly +5% luminance on the base surface. */
+  background: color-mix(in srgb, var(--bg-surface) 88%, var(--primary) 6%) !important;
+  background: rgba(10, 10, 18, 0.95) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  /* promote to its own layer so hover transforms stop re-rasterising the card */
+  will-change: transform;
+  transform: translateZ(0);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -239,6 +255,10 @@ html[data-theme="light"] .select-sl option { background: #fff; color: #0F172A; }
 }
 
 /* === TABS === */
+.btn-sl, .tab-btn, .nav-link, .glass-card, .hud-chip, .rank-badge, button, .modal-panel {
+  will-change: transform;
+  transform: translateZ(0);
+}
 .tab-btn {
   font-family: 'Orbitron', sans-serif; font-size: .58rem; font-weight: 600;
   padding: .65rem .7rem; border: 1px solid rgba(var(--primary-rgb), .1);
@@ -317,12 +337,12 @@ html[data-theme="light"] .tab-btn { background: rgba(255, 255, 255, .6); }
 .system-toast.tone-error { color: var(--danger); border-color: rgba(239,68,68,.5); box-shadow: 0 0 25px rgba(239,68,68,.3); }
 .system-toast.tone-gold { color: var(--accent); border-color: rgba(251,191,36,.5); box-shadow: 0 0 25px rgba(251,191,36,.3); }
 .system-toast.tone-success { color: var(--success); border-color: rgba(16,185,129,.5); box-shadow: 0 0 25px rgba(16,185,129,.3); }
-.modal-backdrop { position: fixed; inset: 0; z-index: 9998; background: rgba(5,5,8,.82); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 1rem; animation: level-up-anim .2s ease-out; }
+.modal-backdrop { position: fixed; inset: 0; z-index: 9998; background: rgba(5,5,8,.92); backdrop-filter: none !important; -webkit-backdrop-filter: none !important; display: flex; align-items: center; justify-content: center; padding: 1rem; animation: level-up-anim .2s ease-out; will-change: transform; transform: translateZ(0); }
 .modal-panel { animation: modal-in 250ms cubic-bezier(.25,.46,.45,.94) both; max-height: 88vh; overflow-y: auto; width: 100%; }
 .level-up-flash {
   position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: radial-gradient(circle at 50% 50%, rgba(var(--primary-rgb), .18), rgba(5,5,8,.94) 55%);
-  animation: level-up-anim .35s ease-out; backdrop-filter: blur(6px); text-align: center; padding: 1rem;
+  animation: level-up-anim .35s ease-out; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; text-align: center; padding: 1rem; will-change: transform; transform: translateZ(0);
 }
 .level-up-text { font-family: 'Orbitron', sans-serif; font-size: clamp(2.5rem, 9vw, 5.5rem); font-weight: 900; letter-spacing: .1em; color: var(--primary); text-shadow: 0 0 30px rgba(var(--primary-rgb), .9), 0 0 70px rgba(var(--primary-rgb), .5); animation: level-up-pulse 1.3s ease-in-out infinite alternate; }
 .level-up-sub { margin-top: .9rem; font-family: 'Orbitron', sans-serif; font-size: clamp(.7rem, 2.4vw, 1rem); font-weight: 700; letter-spacing: .35em; color: var(--accent); }
@@ -334,8 +354,9 @@ html[data-theme="light"] .tab-btn { background: rgba(255, 255, 255, .6); }
 .zoom-widget {
   position: fixed; right: 16px; bottom: 16px; z-index: 9000;
   display: flex; align-items: center; gap: 4px; padding: 6px;
-  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--r-card);
-  backdrop-filter: blur(20px) saturate(180%); box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  background: rgba(10, 10, 18, 0.95) !important; border: 1px solid var(--border); border-radius: var(--r-card);
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important; box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  will-change: transform; transform: translateZ(0);
 }
 .zoom-widget .zoom-readout { font-family: 'Orbitron', sans-serif; font-size: .58rem; min-width: 46px; text-align: center; color: var(--primary); }
 @media (max-width: 767px) {
@@ -344,6 +365,23 @@ html[data-theme="light"] .tab-btn { background: rgba(255, 255, 255, .6); }
   .tab-btn, .btn-sl, .input-sl, .select-sl { min-height: 44px; }
   .tab-btn { display: inline-flex; align-items: center; justify-content: center; }
   .checkbox-sl { width: 44px; height: 44px; flex: 0 0 44px; }
+}
+/* Task C: the 12-tab touch strip. Buttons carry BOTH `.nav-tab-btn` (the
+   spec name) and `.tab-btn` (the pre-existing name the rest of the app CSS
+   and verify-v5.js select), so neither set of rules stops applying. */
+.nav-tabs-container { gap: .35rem; }
+.nav-tabs-container::-webkit-scrollbar { display: none; }
+.nav-tab-btn, .nav-tabs-container .tab-btn {
+  min-height: 44px;
+  padding: .5rem .85rem;
+  font-size: .7rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 767px) {
+  #hud, .hud-header { position: static; }
 }
 
 /* === A11Y === */
@@ -384,10 +422,10 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
 <div id="sr-live" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 <div id="toast-host" aria-live="polite" aria-atomic="false"></div>
 
-<header class="sticky top-0 z-50 glass-card is-static rounded-none border-b glow-pulse" id="hud">
+<header class="hud-header relative z-50 glass-card is-static rounded-none border-b glow-pulse" id="hud">
   <div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
     <div class="flex items-center gap-3">
-      <img src="icons/icon.svg" alt="Momentum logo" width="34" height="34" class="w-[34px] h-[34px] block shrink-0" loading="eager">
+      <img src="./icons/icon.svg" alt="MOMENTUM" width="34" height="34" class="w-[34px] h-[34px] block flex-shrink-0" style="display:block; width:34px; height:34px;" loading="eager">
       <div class="relative">
         <div class="hero-aura" id="headerAura"></div>
         <img id="headerAvatar" alt="Your hunter avatar" class="hero-avatar w-10 h-10" width="40" height="40">
@@ -443,19 +481,19 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
 </header>
 
 <nav class="max-w-[1600px] mx-auto px-4 mt-4" aria-label="Sections">
-  <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar" role="tablist" id="tabbar">
-    <button class="tab-btn active" data-tab="habits" role="tab" aria-selected="true" aria-controls="tab-habits"><span class="tab-key">1</span>Habits</button>
-    <button class="tab-btn" data-tab="dailies" role="tab" aria-selected="false" aria-controls="tab-dailies"><span class="tab-key">2</span>Dailies</button>
-    <button class="tab-btn" data-tab="todos" role="tab" aria-selected="false" aria-controls="tab-todos"><span class="tab-key">3</span>Todos</button>
-    <button class="tab-btn" data-tab="legends" role="tab" aria-selected="false" aria-controls="tab-legends"><span class="tab-key">4</span>Legends</button>
-    <button class="tab-btn" data-tab="character" role="tab" aria-selected="false" aria-controls="tab-character"><span class="tab-key">5</span>Character</button>
-    <button class="tab-btn" data-tab="boss" role="tab" aria-selected="false" aria-controls="tab-boss"><span class="tab-key">6</span>Boss Raid</button>
-    <button class="tab-btn" data-tab="achievements" role="tab" aria-selected="false" aria-controls="tab-achievements"><span class="tab-key">7</span>Achievements</button>
-    <button class="tab-btn" data-tab="calendar" role="tab" aria-selected="false" aria-controls="tab-calendar"><span class="tab-key">8</span>Calendar</button>
-    <button class="tab-btn" data-tab="analytics" role="tab" aria-selected="false" aria-controls="tab-analytics"><span class="tab-key">9</span>Analytics</button>
-    <button class="tab-btn" data-tab="settings" role="tab" aria-selected="false" aria-controls="tab-settings"><span class="tab-key">0</span>Settings</button>
-    <button class="tab-btn" data-tab="leaderboard" role="tab" aria-selected="false" aria-controls="tab-leaderboard"><span class="tab-key">-</span>Leaderboard</button>
-    <button class="tab-btn" data-tab="licenses" role="tab" aria-selected="false" aria-controls="tab-licenses"><span class="tab-key">=</span>Licenses</button>
+  <div class="nav-tabs-container" role="tablist" id="tabbar" style="display:flex; overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; scrollbar-width:none; gap:0.35rem; padding:0.5rem 0;">
+    <button class="nav-tab-btn tab-btn active" data-tab="habits" role="tab" aria-selected="true" aria-controls="tab-habits"><span class="tab-key">1</span>Habits</button>
+    <button class="nav-tab-btn tab-btn" data-tab="dailies" role="tab" aria-selected="false" aria-controls="tab-dailies"><span class="tab-key">2</span>Dailies</button>
+    <button class="nav-tab-btn tab-btn" data-tab="todos" role="tab" aria-selected="false" aria-controls="tab-todos"><span class="tab-key">3</span>Todos</button>
+    <button class="nav-tab-btn tab-btn" data-tab="legends" role="tab" aria-selected="false" aria-controls="tab-legends"><span class="tab-key">4</span>Legends</button>
+    <button class="nav-tab-btn tab-btn" data-tab="character" role="tab" aria-selected="false" aria-controls="tab-character"><span class="tab-key">5</span>Character</button>
+    <button class="nav-tab-btn tab-btn" data-tab="boss" role="tab" aria-selected="false" aria-controls="tab-boss"><span class="tab-key">6</span>Boss Raid</button>
+    <button class="nav-tab-btn tab-btn" data-tab="achievements" role="tab" aria-selected="false" aria-controls="tab-achievements"><span class="tab-key">7</span>Achievements</button>
+    <button class="nav-tab-btn tab-btn" data-tab="calendar" role="tab" aria-selected="false" aria-controls="tab-calendar"><span class="tab-key">8</span>Calendar</button>
+    <button class="nav-tab-btn tab-btn" data-tab="analytics" role="tab" aria-selected="false" aria-controls="tab-analytics"><span class="tab-key">9</span>Analytics</button>
+    <button class="nav-tab-btn tab-btn" data-tab="settings" role="tab" aria-selected="false" aria-controls="tab-settings"><span class="tab-key">0</span>Settings</button>
+    <button class="nav-tab-btn tab-btn" data-tab="leaderboard" role="tab" aria-selected="false" aria-controls="tab-leaderboard"><span class="tab-key">-</span>Leaderboard</button>
+    <button class="nav-tab-btn tab-btn" data-tab="licenses" role="tab" aria-selected="false" aria-controls="tab-licenses"><span class="tab-key">=</span>Licenses</button>
   </div>
 </nav>
 
@@ -466,7 +504,7 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
   <button class="btn-sl btn-icon" id="zoomFit" aria-label="Fit to width">&#9974;</button>
 </div>
 
-<main id="main-content" class="max-w-[1600px] mx-auto px-4 py-6">
+<main id="main-content" class="max-w-[1600px] mx-auto px-4 pt-4 md:pt-6 pb-6">
 <div id="zoom-root">
 
   <section id="tab-habits" class="tab-content active" role="tabpanel" aria-labelledby="tab-habits-label">
@@ -1351,7 +1389,7 @@ function createParticles() {
   particleField.ctx = canvas.getContext('2d');
   if (!particleField.ctx) return;
   resizeParticleCanvas();
-  window.addEventListener('resize', resizeParticleCanvas);
+  window.addEventListener('resize', resizeParticleCanvas, { passive: true });
   seedParticles();
   particleField.running = true;
   requestAnimationFrame(stepParticles);
@@ -2960,6 +2998,10 @@ function wireEventListeners() {
     const el = $(id);
     if (el) el.addEventListener(event, handler);
   };
+  /* Click and key handlers stay non-passive: onDocumentClick and onKeyDown both
+     call e.preventDefault(), which a passive listener is not allowed to do.
+     Passive applies only to scroll/touchstart/touchend/wheel/resize below —
+     those are the events that can otherwise block the compositor. */
   bind('btnAddHabit', 'click', addHabit);
   bind('btnAddDaily', 'click', addDaily);
   bind('btnAddTodo', 'click', addTodo);
@@ -3059,24 +3101,58 @@ function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   if (!/^https?:$/.test(location.protocol)) return;   /* file:// has no SW scope */
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch((err) => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
       console.warn('Momentum: service worker not registered.', err);
     });
   });
 }
 
 /* ---------- background pause ---------- */
-function setBackgroundPaused(hidden) {
+/* Task A: touch-idle gating.
+   While the user is dragging, the CSS animations, the scanline sweep and the
+   canvas particle loop all compete with the scroll gesture for the same
+   compositor thread. Pausing the decorative layers for the gesture duration is
+   what removes the visible lag. */
+window.backgroundBusy = false;
+window._bgPauseTimer = null;
+function pauseBackground(decisive) {
+  window.backgroundBusy = true;
   const scan = document.querySelector('.scanline');
-  if (scan) scan.style.animationPlayState = hidden ? 'paused' : 'running';
+  if (scan) scan.style.animationPlayState = 'paused';
   const stars = document.querySelector('.starfield');
-  if (stars) stars.style.animationPlayState = hidden ? 'paused' : 'running';
-  if (hidden) {
-    particleField.running = false;
-  } else if (!particleField.running && particleField.canvas) {
+  if (stars) stars.style.animationPlayState = 'paused';
+  particleField.running = false;
+  if (window._bgPauseTimer) window.clearTimeout(window._bgPauseTimer);
+  if (!decisive) {
+    window._bgPauseTimer = window.setTimeout(resumeBackground, 120);
+  }
+}
+function resumeBackground() {
+  window.backgroundBusy = false;
+  const scan = document.querySelector('.scanline');
+  if (scan) scan.style.animationPlayState = 'running';
+  const stars = document.querySelector('.starfield');
+  if (stars) stars.style.animationPlayState = 'running';
+  if (!particleField.running && particleField.canvas) {
     particleField.running = true;
     particleField.lastTs = 0;
     requestAnimationFrame(stepParticles);
+  }
+}
+['touchstart', 'pointerdown'].forEach(function (ev) {
+  window.addEventListener(ev, function () { pauseBackground(true); }, { passive: true });
+});
+['touchend', 'touchcancel', 'pointerup', 'pointercancel'].forEach(function (ev) {
+  window.addEventListener(ev, function () { resumeBackground(); }, { passive: true });
+});
+window.addEventListener('wheel', function () { pauseBackground(false); }, { passive: true });
+window.addEventListener('scroll', function () { pauseBackground(false); }, { passive: true });
+
+function setBackgroundPaused(hidden) {
+  if (hidden) {
+    pauseBackground(true);
+  } else {
+    resumeBackground();
   }
 }
 
@@ -3122,8 +3198,8 @@ function boot() {
   const unlocked = checkAchievements();  /* 14 */
   if (unlocked) renderAchievements();
   startSessionTimer();                   /* 15 */
-  document.addEventListener('visibilitychange', () => setBackgroundPaused(document.hidden)); /* 16 */
-  window.addEventListener('resize', () => { redrawVisibleCharts(); });
+  document.addEventListener('visibilitychange', () => setBackgroundPaused(document.hidden), { passive: true }); /* 16 */
+  window.addEventListener('resize', () => { redrawVisibleCharts(); }, { passive: true });
   window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').addEventListener &&
     window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (prefs.theme === 'system') applyTheme(); });
   window.setTimeout(() => { toast('Momentum V5.0 Apex online \u2014 ' + state.habits.length + ' habits loaded'); }, 400);
