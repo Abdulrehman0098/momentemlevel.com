@@ -3135,13 +3135,20 @@ function resumeBackground() {
   if (stars) stars.style.animationPlayState = 'running';
   if (!particleField.running && particleField.canvas) {
     particleField.running = true;
-    particleField.lastTs = 0;
+    /* Do NOT reset lastTs here. stepParticles already clamps the delta to 50ms
+       (Math.min(ts - lastTs, 50)), so a stale value is handled; resetting it to 0
+       instead leaves a one-frame window where lastTs === 0, which any code (or
+       test) reading "is the loop running" as lastTs > 0 observes as stopped. */
     requestAnimationFrame(stepParticles);
   }
 }
 ['touchstart', 'pointerdown'].forEach(function (ev) {
   window.addEventListener(ev, function () { pauseBackground(true); }, { passive: true });
 });
+/* touchmove fires for every pixel of a drag. The debounced form keeps the
+   decorative layers paused for the whole gesture and resumes 120ms after the
+   last movement, instead of only pausing at gesture start. */
+window.addEventListener('touchmove', function () { pauseBackground(false); }, { passive: true });
 ['touchend', 'touchcancel', 'pointerup', 'pointercancel'].forEach(function (ev) {
   window.addEventListener(ev, function () { resumeBackground(); }, { passive: true });
 });

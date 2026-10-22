@@ -913,7 +913,9 @@ function wireFaq() {
     busy = true;
     setPaused(true);
   }
-  ['touchstart', 'pointerdown'].forEach(function (ev) {
+  /* touchmove is the event that actually fires for every pixel of a drag, so it
+     re-asserts the pause continuously rather than only at gesture start. */
+  ['touchstart', 'touchmove', 'pointerdown'].forEach(function (ev) {
     window.addEventListener(ev, touchStart, { passive: true });
   });
   ['touchend', 'touchcancel', 'pointerup', 'pointercancel'].forEach(function (ev) {
