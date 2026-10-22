@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — MOMENTUM</title>
+<meta name="description" content="Momentum's privacy policy: the app stores everything in your browser's localStorage and transmits nothing.">
+<meta name="theme-color" content="#050508">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https://api.dicebear.com; connect-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg-base:#050508; --bg-surface:rgba(10,10,18,.8); --primary:#22D3EE; --primary-rgb:34,211,238;
+  --accent:#FBBF24; --text:#E2E8F0; --text-muted-strong:#94A3B8; --border:rgba(34,211,238,.2);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg-base);color:var(--text);font-variant-numeric:tabular-nums;line-height:1.7}
+.sl-bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(var(--primary-rgb),.07),transparent),var(--bg-base)}
+.glass-card{background:var(--bg-surface);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.8)}
+.site-nav{position:sticky;top:0;z-index:50;background:rgba(5,5,8,.78);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-link{font-family:'Orbitron',sans-serif;font-size:.55rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--text-muted-strong);text-decoration:none;padding:.4rem .6rem;border-radius:8px;border:1px solid transparent}
+.nav-link:hover{color:var(--primary);border-color:var(--border);background:rgba(var(--primary-rgb),.08)}
+.eyebrow{font-family:'Orbitron',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--primary)}
+h1.section-title{font-family:'Orbitron',sans-serif;font-size:clamp(1.4rem,4vw,2.2rem);font-weight:900;letter-spacing:.03em}
+h2.section-title{font-family:'Orbitron',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.14em;color:var(--primary);text-transform:uppercase;margin-bottom:.6rem}
+.lead{color:var(--text-muted-strong)}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:4px}
+.skip-link{position:absolute;left:-9999px;padding:.75rem 1rem;background:var(--primary);color:#050508;font-family:'Orbitron',sans-serif;font-size:.7rem}
+.skip-link:focus{left:0}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:rgba(var(--primary-rgb),.25);border-radius:3px}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="sl-bg" aria-hidden="true"></div>
+
+<header class="site-nav">
+  <div class="max-w-[900px] mx-auto px-5 py-3 flex items-center justify-between gap-4">
+    <a href="index.html" class="flex items-center gap-3 no-underline" aria-label="Momentum home">
+      <img src="icons/icon.svg" alt="" width="30" height="30">
+      <span class="font-orbitron text-sm font-bold tracking-widest" style="color:var(--primary)">MOMENTUM</span>
+    </a>
+    <nav class="flex items-center gap-1" aria-label="Legal">
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="app.html">App</a>
+      <a class="nav-link" href="terms.html">Terms</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="max-w-[900px] mx-auto px-5 py-12">
+  <p class="eyebrow mb-3">Legal</p>
+  <h1 class="section-title mb-3">Privacy Policy</h1>
+  <p class="lead text-sm mb-8">Last updated 13 October 2026 &middot; applies to Momentum V5.0.0 Apex (web, desktop and mobile builds).</p>
+
+  <div class="glass-card p-6 md:p-8 space-y-8 text-sm">
+    <section>
+      <h2 class="section-title">1. Data we collect</h2>
+      <p class="lead">Momentum stores your habits, dailies, todos, streaks, XP, gold, achievements, hunter profiles and preferences in your browser's <code>localStorage</code> under two keys: <code>momentum.v5.state</code> and <code>momentum.v5.prefs</code>. That data never leaves your device. We do not collect, receive, store or have access to it.</p>
+    </section>
+
+    <section>
+      <h2 class="section-title">2. How we use it</h2>
+      <p class="lead">Your data is read by the application on your device to render your progress, compute streaks, award XP and draw your charts. It is never transmitted to us or to any third party, because there is no server component to transmit it to. There is no account system, no analytics SDK, no advertising SDK and no telemetry of any kind in this build.</p>
+    </section>
+
+    <section>
+      <h2 class="section-title">3. Third parties</h2>
+      <p class="lead mb-3">Momentum requests assets from third-party content delivery networks. Those requests disclose your IP address and user agent to the provider in the ordinary way any web request does. They carry none of your progress data:</p>
+      <ul class="lead space-y-2" style="padding-left:1.1rem">
+        <li><strong style="color:var(--text)">DiceBear</strong> (<code>api.dicebear.com</code>) &mdash; generates hunter avatars. Only the seed, hair variant and colour in the image URL are sent; nothing about your habits or progress.</li>
+        <li><strong style="color:var(--text)">Google Fonts</strong> (<code>fonts.googleapis.com</code>) &mdash; serves the Orbitron, Inter and Press Start 2P typefaces.</li>
+        <li><strong style="color:var(--text)">Tailwind CSS</strong> and <strong style="color:var(--text)">jsDelivr</strong> &mdash; serve the utility stylesheet and the confetti library.</li>
+      </ul>
+      <p class="lead mt-3">If a CDN is blocked or unavailable, the app degrades: avatars fall back to a placeholder and the app keeps working.</p>
+    </section>
+
+    <section>
+      <h2 class="section-title">4. Your rights</h2>
+      <p class="lead">Because all data is local, you exercise your rights directly. Open the Settings tab to <strong style="color:var(--text)">export</strong> your entire state as JSON (or your history as CSV), <strong style="color:var(--text)">import</strong> a previous backup, or <strong style="color:var(--text)">clear all data</strong> with a double confirmation. Clearing your browser's site data for this origin has the same effect. There is nothing for us to delete on your behalf, because we never held a copy.</p>
+    </section>
+
+    <section>
+      <h2 class="section-title">5. Cookies</h2>
+      <p class="lead">Momentum sets no cookies and uses no cookie-equivalent tracking. The service worker caches static assets for offline use; that cache holds application files, not your progress, and it is removed when you clear site data.</p>
+    </section>
+
+    <section>
+      <h2 class="section-title">6. Children</h2>
+      <p class="lead">Momentum is intended for users aged 13 and over. It is not directed at children under 13, and because no data is collected there is nothing to request the deletion of.</p>
+    </section>
+
+    <section>
+      <h2 class="section-title">7. Changes</h2>
+      <p class="lead">If a future version introduces cloud sync or any feature that transmits data, this policy will be updated before that version ships, and the change will be described in the app's release notes. The date at the top of this page always reflects the current policy.</p>
+    </section>
+
+    <section>
+      <h2 class="section-title">8. Contact</h2>
+      <p class="lead">Questions about this policy: <a href="mailto:hello@example.com" style="color:var(--primary)">hello@example.com</a>. Replace this address with your own before publishing.</p>
+    </section>
+  </div>
+
+  <p class="lead text-[0.75rem] mt-8">See also: <a href="terms.html" style="color:var(--primary)">Terms of Service</a> &middot; <a href="app.html#tab-licenses" style="color:var(--primary)">Licenses &amp; attributions</a></p>
+</main>
+
+<footer class="max-w-[900px] mx-auto px-5 py-10 border-t" style="border-color:var(--border)">
+  <p class="lead text-[0.72rem]">&copy; 2026 Momentum &middot; V5.0.0 Apex &middot; all data stays on your device.</p>
+</footer>
+</body>
+</html>

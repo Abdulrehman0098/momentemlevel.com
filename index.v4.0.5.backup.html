@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOMENTUM — Solo Leveling System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        orbitron: ['Orbitron', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
+        pixel: ['"Press Start 2P"', 'monospace'],
+      },
+      colors: {
+        solo: { bg: '#050508', surface: '#0A0A12', cyan: '#22D3EE', blue: '#3B82F6', purple: '#8B5CF6', green: '#10B981', amber: '#FBBF24', red: '#EF4444', text: '#E2E8F0', muted: '#64748B' }
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #050508;
+    color: #E2E8F0;
+    min-height: 100vh;
+    overflow-x: hidden;
+    /* Tabular figures everywhere: HUD meters, gold and XP counters must not
+       jitter as their digits change. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* === SOLO LEVELING BACKGROUND === */
+  .sl-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -3;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(34,211,238,0.08), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 90%, rgba(59,130,246,0.06), transparent),
+      radial-gradient(ellipse 40% 30% at 50% 50%, rgba(139,92,246,0.03), transparent),
+      #050508;
+  }
+
+  /* === STARFIELD === */
+  .starfield { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; overflow: hidden; }
+  .star { position: absolute; border-radius: 50%; background: white; animation: twinkle var(--duration) ease-in-out infinite; }
+  @keyframes twinkle { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.8; } }
+
+  /* === SCANLINE (persistent CRT pattern + 8s sweep beam) === */
+  .scanline-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; pointer-events: none; overflow: hidden; }
+  /* Persistent CRT lines: 1px lit every 4px, barely there. */
+  .scanline-container::before {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(34,211,238,0.035) 0px,
+      rgba(34,211,238,0.035) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  }
+  .scanline {
+    position: absolute; top: -140px; left: 0; width: 100%; height: 140px;
+    background: linear-gradient(to bottom, transparent, rgba(34,211,238,0.055), transparent);
+    animation: scanline-sweep 8s linear infinite;
+  }
+  @keyframes scanline-sweep {
+    0% { top: -140px; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  /* === PARTICLES (canvas engine — see createParticles()) === */
+  .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; display: block; }
+
+  /* === GLASS CARD === */
+  .glass-card {
+    background: rgba(10, 10, 18, 0.8);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform-style: preserve-3d;
+  }
+  .glass-card:hover {
+    border-color: rgba(34, 211, 238, 0.6);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 0 25px rgba(34,211,238,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+    transform: translateY(-2px);
+  }
+
+  /* === GLOW PULSE === */
+  .glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+  @keyframes glow-pulse {
+    0%, 100% { border-color: rgba(34, 211, 238, 0.2); box-shadow: 0 8px 32px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05); }
+    50% { border-color: rgba(34, 211, 238, 0.6); box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 0 25px rgba(34,211,238,0.3), inset 0 1px 0 rgba(255,255,255,0.05); }
+  }
+
+  /* === CARD ENTRANCE === */
+  .card-enter {
+    animation: card-entrance 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  @keyframes card-entrance {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* === LEVEL UP CINEMATIC (modal — dismissed by its confirmation button) === */
+  .level-up-flash {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
+    background: radial-gradient(circle at 50% 50%, rgba(34,211,238,0.18), rgba(5,5,8,0.94) 55%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    animation: level-up-anim 0.35s ease-out;
+    pointer-events: auto;
+    backdrop-filter: blur(6px);
+  }
+  .level-up-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(2.5rem, 9vw, 5.5rem); font-weight: 900; letter-spacing: 0.1em;
+    color: #22D3EE;
+    text-shadow: 0 0 30px rgba(34,211,238,0.9), 0 0 70px rgba(34,211,238,0.5);
+    animation: level-up-pulse 1.3s ease-in-out infinite alternate;
+    will-change: transform, opacity;
+  }
+  .level-up-sub {
+    margin-top: 0.9rem; text-align: center;
+    font-family: 'Orbitron', sans-serif; font-size: clamp(0.7rem, 2.4vw, 1rem);
+    font-weight: 700; letter-spacing: 0.35em; color: #FBBF24;
+  }
+  .level-up-rank {
+    margin-top: 0.5rem;
+    font-family: 'Orbitron', sans-serif; font-size: 0.62rem;
+    font-weight: 700; letter-spacing: 0.3em; color: #8B5CF6;
+  }
+  .level-up-confirm {
+    margin-top: 2.2rem; cursor: pointer;
+    font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: #050508; padding: 0.85rem 1.7rem; border-radius: 10px;
+    border: 1px solid #22D3EE;
+    background: linear-gradient(135deg, #22D3EE, #3B82F6);
+    box-shadow: 0 0 25px rgba(34,211,238,0.5);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .level-up-confirm:hover, .level-up-confirm:focus-visible {
+    transform: scale(1.05); box-shadow: 0 0 40px rgba(34,211,238,0.85); outline: none;
+  }
+  @keyframes level-up-anim {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  @keyframes level-up-pulse {
+    from { transform: scale(1); opacity: 0.9; }
+    to { transform: scale(1.06); opacity: 1; }
+  }
+
+  /* === STAT BAR SHIMMER === */
+  .stat-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.05); overflow: hidden; position: relative; }
+  .stat-bar-fill {
+    height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+  }
+  .stat-bar-fill::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* === BUTTONS === */
+  .btn-sl {
+    font-family: 'Orbitron', sans-serif; font-weight: 600; font-size: 0.7rem;
+    padding: 0.6rem 1.2rem; border-radius: 10px;
+    border: 1px solid rgba(34,211,238,0.4); background: rgba(34,211,238,0.08);
+    color: #22D3EE; cursor: pointer; transition: all 0.3s ease;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .btn-sl:hover {
+    background: rgba(34,211,238,0.15); border-color: #22D3EE;
+    box-shadow: 0 0 20px rgba(34,211,238,0.3); transform: scale(1.05);
+  }
+  .btn-gold {
+    border-color: rgba(251,191,36,0.4); background: rgba(251,191,36,0.08); color: #FBBF24;
+  }
+  .btn-gold:hover {
+    background: rgba(251,191,36,0.15); border-color: #FBBF24;
+    box-shadow: 0 0 20px rgba(251,191,36,0.3);
+  }
+  .btn-green {
+    border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.08); color: #10B981;
+  }
+  .btn-green:hover {
+    background: rgba(16,185,129,0.15); border-color: #10B981;
+    box-shadow: 0 0 20px rgba(16,185,129,0.3);
+  }
+  .btn-red {
+    border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); color: #EF4444;
+  }
+  .btn-red:hover {
+    background: rgba(239,68,68,0.15); border-color: #EF4444;
+    box-shadow: 0 0 20px rgba(239,68,68,0.3);
+  }
+
+  /* === INPUT === */
+  .input-sl {
+    background: rgba(10,10,18,0.8); border: 1px solid rgba(34,211,238,0.15);
+    border-radius: 10px; padding: 0.5rem 0.75rem; color: #E2E8F0;
+    font-family: 'Inter', sans-serif; font-size: 0.8rem; outline: none; transition: all 0.3s ease;
+  }
+  .input-sl:focus { border-color: rgba(34,211,238,0.5); box-shadow: 0 0 10px rgba(34,211,238,0.1); }
+
+  /* === CHECKBOX === */
+  .checkbox-sl {
+    appearance: none; width: 22px; height: 22px; border: 2px solid rgba(34,211,238,0.3);
+    border-radius: 6px; cursor: pointer; position: relative; transition: all 0.3s ease;
+    background: rgba(10,10,18,0.8);
+  }
+  .checkbox-sl:checked { background: rgba(34,211,238,0.2); border-color: #22D3EE; }
+  .checkbox-sl:checked::after {
+    content: '\2713'; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); color: #22D3EE; font-size: 13px; font-weight: bold;
+  }
+
+  /* === TAB === */
+  /* Inactive panels must be hidden, or every section renders stacked at once. */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .tab-btn {
+    font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 600;
+    padding: 0.7rem 0.6rem; border: 1px solid rgba(34,211,238,0.1);
+    background: rgba(10,10,18,0.5); color: #64748B; border-radius: 10px;
+    cursor: pointer; transition: all 0.3s ease; white-space: nowrap;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .tab-btn:hover { border-color: rgba(34,211,238,0.4); color: #22D3EE; }
+  .tab-btn.active {
+    border-color: #22D3EE; background: rgba(34,211,238,0.1); color: #22D3EE;
+    box-shadow: 0 0 15px rgba(34,211,238,0.15);
+  }
+
+  /* === AVATAR === */
+  .hero-avatar {
+    filter: drop-shadow(0 0 20px var(--aura-color));
+    border: 3px solid var(--aura-color); border-radius: 50%; padding: 4px;
+    background: rgba(0,0,0,0.5);
+  }
+  .avatar-glow-ring {
+    position: absolute; inset: -6px; border-radius: 50%;
+    border: 2px solid var(--aura-color); animation: ring-rotate 8s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes ring-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes aura-pulse {
+    0% { opacity: 0.45; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1.1); }
+  }
+  /* Soft radial bloom behind an avatar. Without a box of its own the aura
+     <div> collapses to zero height and the glow never appears. */
+  .hero-aura {
+    position: absolute; inset: -8px; border-radius: 50%;
+    filter: blur(6px); pointer-events: none;
+    animation: aura-pulse 2.5s ease-in-out infinite alternate;
+  }
+
+  /* === BOSS DRAGON === */
+  /* The raid boss hovers and breathes so the tab never looks like a still. */
+  .boss-dragon {
+    display: inline-block;
+    filter: drop-shadow(0 0 18px rgba(139,92,246,0.55));
+    animation: dragon-hover 3.4s ease-in-out infinite;
+  }
+  @keyframes dragon-hover {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-8px) scale(1.06); }
+  }
+
+  /* === BOSS HP === */
+  .boss-hp-bar { height: 24px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(139,92,246,0.3); overflow: hidden; }
+  .boss-hp-fill {
+    height: 100%; background: linear-gradient(90deg, #8B5CF6, #A78BFA);
+    border-radius: 12px; transition: width 0.5s ease;
+  }
+
+  /* === SCROLLBAR === */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: rgba(5,5,8,0.5); }
+  ::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.2); border-radius: 3px; }
+
+  /* === NUMBER ROLL === */
+  .number-roll { font-family: 'Orbitron', monospace; font-variant-numeric: tabular-nums; }
+
+  /* === EQUIP SLOT === */
+  .equip-slot {
+    background: rgba(10,10,18,0.6); border: 1px dashed rgba(34,211,238,0.15);
+    border-radius: 12px; padding: 0.75rem; text-align: center; transition: all 0.3s ease;
+  }
+  .equip-slot:hover { border-color: rgba(34,211,238,0.4); background: rgba(10,10,18,0.8); }
+
+  /* === HUD NAV / BADGES / METERS === */
+  .hud-link {
+    font-family: 'Orbitron', sans-serif; font-size: 0.55rem; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase; color: #64748B;
+    text-decoration: none; padding: 0.35rem 0.6rem; border-radius: 8px;
+    border: 1px solid transparent; transition: all 0.25s ease;
+  }
+  .hud-link:hover, .hud-link:focus-visible {
+    color: #22D3EE; border-color: rgba(34,211,238,0.4); background: rgba(34,211,238,0.08);
+  }
+  .hud-stat { display: flex; align-items: center; gap: 0.4rem; }
+  .hud-meter {
+    width: 58px; height: 4px; margin-top: 2px; border-radius: 2px;
+    background: rgba(255,255,255,0.08); overflow: hidden;
+  }
+  .hud-meter-fill {
+    height: 100%; width: 0%; border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .rank-badge {
+    font-family: 'Orbitron', sans-serif; font-size: 0.5rem; font-weight: 700;
+    letter-spacing: 0.15em; padding: 0.28rem 0.5rem; border-radius: 6px;
+    color: #FBBF24; background: rgba(251,191,36,0.1);
+    border: 1px solid rgba(251,191,36,0.4);
+  }
+
+  /* === CHARTS === */
+  .chart-canvas { display: block; width: 100%; }
+  .chart-legend { display: flex; gap: 0.9rem; flex-wrap: wrap; margin-top: 0.7rem; }
+  .chart-legend span { font-size: 0.6rem; color: #64748B; }
+  .chart-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    margin-right: 0.3rem; vertical-align: middle;
+  }
+
+  /* === SYSTEM TOAST === */
+  .system-toast {
+    position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%);
+    z-index: 10001; padding: 0.65rem 1.15rem; border-radius: 10px;
+    font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 600;
+    letter-spacing: 0.15em; text-transform: uppercase; color: #EF4444;
+    background: rgba(10,10,18,0.95); border: 1px solid rgba(239,68,68,0.5);
+    box-shadow: 0 0 25px rgba(239,68,68,0.3);
+    animation: toast-in 0.25s ease-out;
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translate(-50%, 10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+
+  /* === ABOUT / DOCS === */
+  .doc-row { padding-left: 0.9rem; border-left: 2px solid rgba(34,211,238,0.2); }
+
+  @media (max-width: 768px) { .tab-btn { font-size: 0.45rem; padding: 0.5rem 0.3rem; } }
+</style>
+</head>
+<body>
+<div class="sl-bg"></div>
+<div class="starfield" id="starfield"></div>
+<canvas class="particles" id="particles" aria-hidden="true"></canvas>
+<div class="scanline-container"><div class="scanline"></div></div>
+
+<header class="sticky top-0 z-50 glass-card border-b border-cyan-500/20 rounded-none glow-pulse" style="backdrop-filter: blur(20px) saturate(180%);">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <div class="hero-aura" id="headerAura" style="background: radial-gradient(circle, rgba(34,211,238,0.4), transparent);"></div>
+        <img id="headerAvatar" alt="Hero" class="hero-avatar w-10 h-10" style="--aura-color: rgba(34,211,238,0.6);">
+        <div class="avatar-glow-ring" style="--aura-color: rgba(34,211,238,0.6);"></div>
+      </div>
+      <div>
+        <h1 class="font-orbitron text-sm font-bold tracking-widest" style="color:#22D3EE;">MOMENTUM</h1>
+        <p class="text-xs mt-1" style="color:#64748B;">[SYSTEM ONLINE] // <span style="color:#10B981;">V4.0.5 LIVE</span></p>
+      </div>
+    </div>
+    <nav class="flex items-center gap-1" aria-label="Section navigation">
+      <a class="hud-link" href="#app">Features</a>
+      <a class="hud-link" href="#about">About</a>
+      <a class="hud-link" href="#docs">Docs</a>
+    </nav>
+    <div class="flex items-center gap-4 flex-wrap">
+      <div class="flex items-center gap-2">
+        <div class="font-orbitron text-xs font-bold px-3 py-1.5 rounded-lg border border-cyan-500/30" style="color:#22D3EE; background: rgba(34,211,238,0.08);">LVL <span id="levelDisplay" class="number-roll">0</span></div>
+        <span class="rank-badge" id="rankDisplay">E-RANK</span>
+      </div>
+      <div class="hud-stat">
+        <span class="text-xs">&#10084;</span>
+        <div>
+          <span id="hpDisplay" class="text-xs font-semibold number-roll">0/0</span>
+          <div class="hud-meter"><div id="hpMeter" class="hud-meter-fill" style="background: linear-gradient(90deg,#EF4444,#F87171);"></div></div>
+        </div>
+      </div>
+      <div class="hud-stat">
+        <span class="text-xs">&#9889;</span>
+        <div>
+          <span id="mpDisplay" class="text-xs font-semibold number-roll">0/0</span>
+          <div class="hud-meter"><div id="mpMeter" class="hud-meter-fill" style="background: linear-gradient(90deg,#3B82F6,#22D3EE);"></div></div>
+        </div>
+      </div>
+      <div class="hud-stat">
+        <span class="text-xs">&#11088;</span>
+        <div>
+          <span id="xpDisplay" class="text-xs font-semibold number-roll">0/0</span>
+          <div class="hud-meter"><div id="xpMeter" class="hud-meter-fill" style="background: linear-gradient(90deg,#FBBF24,#F59E0B);"></div></div>
+        </div>
+      </div>
+      <div class="hud-stat">
+        <span class="text-xs">&#128176;</span>
+        <span id="goldDisplay" class="text-xs font-semibold number-roll" style="color:#FBBF24;">0</span>
+      </div>
+      <button class="btn-red" onclick="resetDemoData()" style="font-size:0.55rem; padding:0.4rem 0.8rem;">Reset</button>
+    </div>
+  </div>
+</header>
+
+<nav id="app" class="max-w-7xl mx-auto px-4 mt-4 scroll-mt-24">
+  <div class="flex gap-2 overflow-x-auto pb-2">
+    <button class="tab-btn active" data-tab="habits" onclick="switchTab('habits')">Habits</button>
+    <button class="tab-btn" data-tab="dailies" onclick="switchTab('dailies')">Dailies</button>
+    <button class="tab-btn" data-tab="todos" onclick="switchTab('todos')">Todos</button>
+    <button class="tab-btn" data-tab="legends" onclick="switchTab('legends')">Legends</button>
+    <button class="tab-btn" data-tab="character" onclick="switchTab('character')">Character</button>
+    <button class="tab-btn" data-tab="boss" onclick="switchTab('boss')">Boss Raid</button>
+    <button class="tab-btn" data-tab="licenses" onclick="switchTab('licenses')">Licenses</button>
+  </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-6">
+  <div id="tab-habits" class="tab-content active">
+    <div class="glass-card p-6">
+      <h2 class="font-orbitron text-xs font-bold tracking-widest mb-1" style="color:#22D3EE;">HABITS</h2>
+      <p class="text-xs mb-4" style="color:#64748B;">Tap <strong style="color:#10B981;">+</strong> to bank a streak: +10 XP, +2 Gold, 200 Boss HP.</p>
+      <div class="flex gap-2 mb-4">
+        <input type="text" id="newHabitInput" class="input-sl flex-1" placeholder="Add new habit..." onkeypress="if(event.key==='Enter')addHabit()">
+        <button class="btn-sl" onclick="addHabit()">+ Add</button>
+      </div>
+      <div id="habitsList" class="space-y-2"></div>
+    </div>
+  </div>
+  <div id="tab-dailies" class="tab-content">
+    <div class="glass-card p-6">
+      <h2 class="font-orbitron text-xs font-bold tracking-widest mb-1" style="color:#22D3EE;">DAILIES</h2>
+      <p class="text-xs mb-4" style="color:#64748B;">+20 XP, +5 Gold, 500 Boss HP per completion.</p>
+      <div class="flex gap-2 mb-4">
+        <input type="text" id="newDailyInput" class="input-sl flex-1" placeholder="Add daily task..." onkeypress="if(event.key==='Enter')addDaily()">
+        <button class="btn-sl" onclick="addDaily()">+ Add</button>
+      </div>
+      <div id="dailiesList" class="space-y-2"></div>
+    </div>
+  </div>
+  <div id="tab-todos" class="tab-content">
+    <div class="glass-card p-6">
+      <h2 class="font-orbitron text-xs font-bold tracking-widest mb-1" style="color:#22D3EE;">TODOS</h2>
+      <p class="text-xs mb-4" style="color:#64748B;">+50 XP, +15 Gold, 1000 Boss HP per completion.</p>
+      <div class="flex gap-2 mb-4">
+        <input type="text" id="newTodoInput" class="input-sl flex-1" placeholder="Add todo..." onkeypress="if(event.key==='Enter')addTodo()">
+        <button class="btn-sl" onclick="addTodo()">+ Add</button>
+      </div>
+      <div id="todosList" class="space-y-2"></div>
+    </div>
+  </div>
+  <div id="tab-legends" class="tab-content">
+    <div class="glass-card p-6">
+      <h2 class="font-orbitron text-xs font-bold tracking-widest mb-1" style="color:#22D3EE;">LEGENDS</h2>
+      <p class="text-xs mb-4" style="color:#64748B;">Choose your hero. Updates avatar everywhere.</p>
+      <div id="legendsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </div>
+  </div>
+  <div id="tab-character" class="tab-content">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="glass-card p-6">
+        <h2 class="font-orbitron text-xs font-bold tracking-widest mb-4" style="color:#22D3EE;">EQUIPMENT</h2>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="equip-slot"><p class="font-orbitron text-[0.35rem] tracking-widest mb-2" style="color:#64748B;">HELMET</p><p id="equipHelmet" class="text-xs" style="color:#E2E8F0;">None</p></div>
+          <div class="equip-slot"><p class="font-orbitron text-[0.35rem] tracking-widest mb-2" style="color:#64748B;">SHIELD</p><p id="equipShield" class="text-xs" style="color:#E2E8F0;">None</p></div>
+          <div class="equip-slot"><p class="font-orbitron text-[0.35rem] tracking-widest mb-2" style="color:#64748B;">WEAPON</p><p id="equipWeapon" class="text-xs" style="color:#E2E8F0;">None</p></div>
+          <div class="equip-slot"><p class="font-orbitron text-[0.35rem] tracking-widest mb-2" style="color:#64748B;">POTION</p><p id="equipPotion" class="text-xs" style="color:#E2E8F0;">None</p></div>
+        </div>
+      </div>
+      <div class="glass-card p-6">
+        <h2 class="font-orbitron text-xs font-bold tracking-widest mb-4" style="color:#22D3EE;">STATS</h2>
+        <div class="flex items-center gap-4 mb-4">
+          <div class="relative">
+            <img id="charAvatar" alt="Character" class="hero-avatar w-16 h-16" style="--aura-color: rgba(34,211,238,0.6);">
+            <div class="avatar-glow-ring" style="--aura-color: rgba(34,211,238,0.6);"></div>
+          </div>
+          <div>
+            <p id="heroNameDisplay" class="font-orbitron text-[0.5rem] font-bold" style="color:#FBBF24;">Shadow Monarch</p>
+            <p id="heroTaglineDisplay" class="text-xs mt-1" style="color:#64748B;"></p>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div><div class="flex justify-between mb-1"><span class="font-orbitron text-[0.35rem] tracking-widest" style="color:#EF4444;">STRENGTH</span><span id="statStrVal" class="text-xs number-roll" style="color:#64748B;">0</span></div><div class="stat-bar"><div id="statStrBar" class="stat-bar-fill" style="width:0%; background: linear-gradient(90deg, #EF4444, #F87171);"></div></div></div>
+          <div><div class="flex justify-between mb-1"><span class="font-orbitron text-[0.35rem] tracking-widest" style="color:#10B981;">AGILITY</span><span id="statAgiVal" class="text-xs number-roll" style="color:#64748B;">0</span></div><div class="stat-bar"><div id="statAgiBar" class="stat-bar-fill" style="width:0%; background: linear-gradient(90deg, #10B981, #4ADE80);"></div></div></div>
+          <div><div class="flex justify-between mb-1"><span class="font-orbitron text-[0.35rem] tracking-widest" style="color:#22D3EE;">INTELLIGENCE</span><span id="statIntVal" class="text-xs number-roll" style="color:#64748B;">0</span></div><div class="stat-bar"><div id="statIntBar" class="stat-bar-fill" style="width:0%; background: linear-gradient(90deg, #22D3EE, #67E8F9);"></div></div></div>
+          <div><div class="flex justify-between mb-1"><span class="font-orbitron text-[0.35rem] tracking-widest" style="color:#FBBF24;">PERCEPTION</span><span id="statPerVal" class="text-xs number-roll" style="color:#64748B;">0</span></div><div class="stat-bar"><div id="statPerBar" class="stat-bar-fill" style="width:0%; background: linear-gradient(90deg, #FBBF24, #FDE68A);"></div></div></div>
+          <div><div class="flex justify-between mb-1"><span class="font-orbitron text-[0.35rem] tracking-widest" style="color:#8B5CF6;">CREATIVITY</span><span id="statCreVal" class="text-xs number-roll" style="color:#64748B;">0</span></div><div class="stat-bar"><div id="statCreBar" class="stat-bar-fill" style="width:0%; background: linear-gradient(90deg, #8B5CF6, #A78BFA);"></div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <div class="glass-card p-6">
+        <h2 class="font-orbitron text-xs font-bold tracking-widest mb-4" style="color:#22D3EE;">STAT RADAR</h2>
+        <canvas id="radarChart" class="chart-canvas" width="640" height="420" role="img" aria-label="Stat radar polygon chart"></canvas>
+        <div class="chart-legend" id="radarLegend"></div>
+      </div>
+      <div class="glass-card p-6">
+        <h2 class="font-orbitron text-xs font-bold tracking-widest mb-4" style="color:#22D3EE;">WEEKLY XP TREND</h2>
+        <canvas id="xpTrendChart" class="chart-canvas" width="640" height="420" role="img" aria-label="Weekly XP trend chart"></canvas>
+        <div class="chart-legend">
+          <span><i class="chart-dot" style="background:#22D3EE;"></i>XP earned</span>
+          <span><i class="chart-dot" style="background:#FBBF24;"></i>Daily target</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="tab-boss" class="tab-content">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="glass-card p-6">
+        <h2 class="font-orbitron text-xs font-bold tracking-widest mb-4" style="color:#8B5CF6;">BOSS RAID</h2>
+        <div class="text-center mb-4">
+          <div class="text-6xl mb-3 boss-dragon">&#128009;</div>
+          <h3 class="font-orbitron text-xs font-bold tracking-widest mb-2" style="color:#E2E8F0;">The Procrastination Dragon</h3>
+          <div class="boss-hp-bar mb-2"><div id="bossHpFill" class="boss-hp-fill" style="width:100%"></div></div>
+          <p id="bossHpText" class="text-xs number-roll" style="color:#64748B;">10000 / 10000 HP</p>
+        </div>
+        <button id="castUltimateBtn" class="btn-sl w-full mb-3" onclick="castUltimate()">Cast Ultimate (10 MP)</button>
+        <button class="btn-red w-full" onclick="reviveBoss()">Revive Boss</button>
+        <p id="bossDefeatText" class="text-xs text-center mt-2 hidden" style="color:#FBBF24;">&#127942; Defeated! +500 Gold</p>
+      </div>
+      <div class="glass-card p-6">
+        <h2 class="font-orbitron text-xs font-bold tracking-widest mb-4" style="color:#22D3EE;">PARTY</h2>
+        <div id="partyList" class="space-y-3"></div>
+      </div>
+    </div>
+  </div>
+  <div id="tab-licenses" class="tab-content">
+    <div class="glass-card p-6">
+      <h2 class="font-orbitron text-xs font-bold tracking-widest mb-1" style="color:#22D3EE;">LICENSES &amp; ATTRIBUTIONS</h2>
+      <p class="text-xs mb-5" style="color:#64748B;">MOMENTUM — Solo Leveling System, <strong style="color:#E2E8F0;">V4.0.5</strong>. Shipped as one self-contained HTML file with no build step.</p>
+      <div class="space-y-6 text-xs leading-relaxed" style="color:#64748B;">
+        <div><h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#E2E8F0;">Canvas API</h3><p>The stat radar, the weekly XP trend and the background particle field are all drawn with the native HTML Canvas 2D API — no charting library. Part of the HTML Living Standard (WHATWG).</p></div>
+        <div><h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#E2E8F0;">Flutter &amp; Riverpod</h3><p>The native mobile/desktop build of Momentum is written in Flutter and uses Riverpod for state management. BSD-3-Clause and MIT License respectively.</p></div>
+        <div><h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#E2E8F0;">Google Fonts</h3><p>Orbitron and Inter are served through the Google Fonts API. Apache License 2.0.</p></div>
+        <div><h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#E2E8F0;">DiceBear</h3><p>Hero avatars generated with the DiceBear API (Adventurer style). MIT License.</p></div>
+        <div><h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#E2E8F0;">Tailwind CSS</h3><p>Utility CSS framework by Tailwind Labs. MIT License.</p></div>
+        <div><h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#E2E8F0;">Orbitron</h3><p>Display typeface by Matt McInerney. SIL Open Font License 1.1.</p></div>
+        <div><h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#E2E8F0;">Inter</h3><p>Body typeface by Rasmus Andersson. SIL Open Font License 1.1.</p></div>
+        <div><h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#E2E8F0;">canvas-confetti</h3><p>Confetti animation library by Kiril Vatev. MIT License.</p></div>
+        <div><h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#E2E8F0;">Web Storage API</h3><p>All progress is persisted locally through <code>localStorage</code>. Nothing is transmitted off the device.</p></div>
+        <div class="border-t pt-4" style="border-color: rgba(100,116,139,0.2);">
+          <h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#FBBF24;">CHARACTER DISCLAIMER</h3>
+          <p>The four hero archetypes — <strong style="color:#E2E8F0;">Shadow Monarch, Raging Berserker, Archmage</strong> and <strong style="color:#E2E8F0;">Cosmic Architect</strong> — are original characters inspired by general fantasy archetypes. They are not affiliated with, endorsed by, or derived from any existing franchise.</p>
+        </div>
+        <div class="border-t pt-4" style="border-color: rgba(100,116,139,0.2);">
+          <h3 class="font-orbitron text-[0.45rem] font-bold tracking-widest mb-2" style="color:#FBBF24;">VERSION</h3>
+          <p>MOMENTUM <strong style="color:#E2E8F0;">V4.0.5 LIVE</strong> — feature parity across the single-file web application and the Flutter client.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<section id="about" class="max-w-7xl mx-auto px-4 pb-4 scroll-mt-24">
+  <div class="glass-card p-6">
+    <h2 class="font-orbitron text-xs font-bold tracking-widest mb-3" style="color:#22D3EE;">ABOUT MOMENTUM</h2>
+    <p class="text-xs leading-relaxed" style="color:#64748B;">
+      Momentum is a gamified habit tracker built on the Solo Leveling system: every habit, daily and
+      quest you complete earns XP and gold, damages the raid boss, and levels your hunter. Streaks
+      raise your rank from E through S. Progress is stored locally in your browser — nothing leaves
+      the device.
+    </p>
+  </div>
+</section>
+
+<section id="docs" class="max-w-7xl mx-auto px-4 pb-10 scroll-mt-24">
+  <div class="glass-card p-6">
+    <h2 class="font-orbitron text-xs font-bold tracking-widest mb-4" style="color:#22D3EE;">DOCS — QUICK START</h2>
+    <div class="space-y-3 text-xs leading-relaxed" style="color:#64748B;">
+      <p class="doc-row"><strong style="color:#E2E8F0;">Habits</strong> — tap <strong style="color:#10B981;">+</strong> to bank a streak (+10 XP, +2 gold, 200 boss damage) or <strong style="color:#EF4444;">−</strong> to undo one.</p>
+      <p class="doc-row"><strong style="color:#E2E8F0;">Dailies</strong> — tick a checkbox for +20 XP, +5 gold and 500 boss damage.</p>
+      <p class="doc-row"><strong style="color:#E2E8F0;">Todos</strong> — one-time quests worth +50 XP, +15 gold and 1000 boss damage.</p>
+      <p class="doc-row"><strong style="color:#E2E8F0;">Boss Raid</strong> — Cast Ultimate spends 10 MP for 1500 damage; Revive Boss resets it to 10000 HP.</p>
+      <p class="doc-row"><strong style="color:#E2E8F0;">Character</strong> — the radar plots your five stats; the trend chart plots XP earned over the last seven days.</p>
+      <p class="doc-row"><strong style="color:#E2E8F0;">Reset</strong> — the header button wipes local state and reseeds the demo data.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+// ============================================================
+// SEED DATA — MUST RUN BEFORE ANYTHING ELSE
+// ============================================================
+/// Local-time YYYY-MM-DD key, used for the daily XP ledger.
+function isoDay(d) {
+  var m = d.getMonth() + 1, day = d.getDate();
+  return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+}
+
+function seedData() {
+  var existing = localStorage.getItem('momentumState');
+  if (existing) {
+    try {
+      var parsed = JSON.parse(existing);
+      if (parsed.habits && parsed.habits.length > 0) return;
+    } catch(e) {}
+  }
+  var seed = {
+    gold: 650,
+    hp: 100, hpMax: 100,
+    mp: 100, mpMax: 100,
+    xp: 520, xpMax: 550,
+    level: 3,
+    bossHp: 10000, bossHpMax: 10000,
+    bossDefeated: false,
+    hero: 'monarch',
+    xpByDay: {},
+    habits: [
+      { id: 1, name: 'Morning Run', icon: '🏃', streak: 13 },
+      { id: 2, name: 'Read 20 Pages', icon: '📖', streak: 5 },
+      { id: 3, name: 'Drink Water', icon: '💧', streak: 21 }
+    ],
+    dailies: [
+      { id: 1, name: 'Review daily roadmap', done: false },
+      { id: 2, name: 'Read for 15 minutes', done: false },
+      { id: 3, name: 'Take Vitamins', done: false },
+      { id: 4, name: 'Journal 3 things', done: false }
+    ],
+    todos: [
+      { id: 1, name: 'Finish Project Report', done: false },
+      { id: 2, name: 'Call Courier', done: false },
+      { id: 3, name: 'Buy Groceries', done: false },
+      { id: 4, name: 'Book Flight Tickets', done: false }
+    ]
+  };
+
+  // Six days of demo XP history (oldest -> yesterday) so the weekly trend chart
+  // opens with a real series. Today starts at zero and grows as you play.
+  var history = [120, 85, 240, 60, 190, 310, 0];
+  var now = new Date();
+  for (var i = 6; i >= 0; i--) {
+    seed.xpByDay[isoDay(new Date(now.getTime() - i * 86400000))] = history[6 - i];
+  }
+
+  localStorage.setItem('momentumState', JSON.stringify(seed));
+}
+
+seedData();
+
+// ============================================================
+// HEROES
+// ============================================================
+// One canonical loadout, shared by every archetype.
+var EQUIPMENT = {
+  helmet: 'Crown of Eternity',
+  shield: 'Aegis of Void',
+  weapon: 'Staff of Creation',
+  potion: 'Gauntlet of Quickening'
+};
+
+var HEROES = [
+  { id: 'monarch', name: 'Shadow Monarch', seed: 'Monarch', auraColor: 'rgba(139,92,246,0.6)',
+    tagline: 'Monarch of the stars, fueled by endless battle spirit.',
+    str: 85, agi: 70, int: 60, per: 75, cre: 80,
+    skill: 'Ruler of Shadows', equipment: EQUIPMENT },
+  { id: 'berserker', name: 'Raging Berserker', seed: 'Berserker', auraColor: 'rgba(220,38,38,0.6)',
+    tagline: 'Untamable beast driven by vengeance and rage.',
+    str: 95, agi: 55, int: 35, per: 45, cre: 40,
+    skill: 'Blood Frenzy', equipment: EQUIPMENT },
+  { id: 'archmage', name: 'Archmage', seed: 'Archmage', auraColor: 'rgba(34,211,238,0.6)',
+    tagline: 'Master of blazing intellect, wreathed in heavy robes.',
+    str: 40, agi: 60, int: 95, per: 80, cre: 85,
+    skill: 'Arcane Cataclysm', equipment: EQUIPMENT },
+  { id: 'architect', name: 'Cosmic Architect', seed: 'Architect', auraColor: 'rgba(251,191,36,0.6)',
+    tagline: 'Architect shaping realities, surveying every facet.',
+    str: 60, agi: 75, int: 90, per: 90, cre: 95,
+    skill: 'Reality Reconstruction', equipment: EQUIPMENT }
+];
+
+// DiceBear adventurer style options per archetype. Every `hair` value must be a
+// real variant name (`long01`, `short02`, ...) — a bare `long` is a 400.
+var AVATAR_STYLE = {
+  monarch: 'hair=long01&hairColor=8b5cf6&eyes=variant04&mouth=variant01',
+  berserker: 'hair=short02&hairColor=dc2626&eyes=variant01&mouth=variant03',
+  archmage: 'hair=long01&hairColor=22d3ee&eyes=variant02&mouth=variant02',
+  architect: 'hair=short01&hairColor=fbbf24&eyes=variant04&mouth=variant01',
+  saiyan: 'hair=short02&hairColor=8b5cf6&eyes=variant03&mouth=variant02',
+  ghost: 'hair=long02&hairColor=22d3ee&eyes=variant01&mouth=variant01',
+  capod: 'hair=short01&hairColor=ef4444&eyes=variant02&mouth=variant04'
+};
+
+// The raid party — the hunters who fight alongside the active hero. Distinct
+// from the four playable archetypes; Cosmic Architect appears in both lists,
+// so that row lights up as ACTIVE when the matching hero is selected.
+var PARTY = [
+  { id: 'saiyan', name: 'Saiyan Warrior', role: 'Front-line Bruiser', seed: 'Saiyan', auraColor: 'rgba(139,92,246,0.6)' },
+  { id: 'ghost', name: 'Ghost of Sports', role: 'Momentum Keeper', seed: 'Ghost', auraColor: 'rgba(34,211,238,0.6)' },
+  { id: 'capod', name: 'Capod Baby', role: 'Chaos Support', seed: 'Capod', auraColor: 'rgba(239,68,68,0.6)' },
+  { id: 'architect', name: 'Cosmic Architect', role: 'Reality Shaper', seed: 'Architect', auraColor: 'rgba(251,191,36,0.6)' }
+];
+
+function getHeroAvatarUrl(hero) {
+  var style = AVATAR_STYLE[hero.id] || AVATAR_STYLE.monarch;
+  return 'https://api.dicebear.com/7.x/adventurer/svg?seed=' +
+    encodeURIComponent(hero.seed) + '&' + style + '&backgroundColor=050508';
+}
+
+function getHero(id) {
+  for (var i = 0; i < HEROES.length; i++) { if (HEROES[i].id === id) return HEROES[i]; }
+  return HEROES[0];
+}
+
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
+function loadState() {
+  var saved = localStorage.getItem('momentumState');
+  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
+  return { gold: 650, hp: 100, hpMax: 100, mp: 100, mpMax: 100, xp: 520, xpMax: 550, level: 3, bossHp: 10000, bossHpMax: 10000, bossDefeated: false, hero: 'monarch', xpByDay: {}, habits: [], dailies: [], todos: [] };
+}
+function saveState() { localStorage.setItem('momentumState', JSON.stringify(state)); }
+var state = loadState();
+
+// ============================================================
+// NUMBER ROLL-UP ANIMATION
+// ============================================================
+function rollUpNumber(el, target, duration) {
+  duration = duration || 1000;
+  var start = null;
+  var from = 0;
+  function step(ts) {
+    if (!start) start = ts;
+    var progress = Math.min((ts - start) / duration, 1);
+    var eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.floor(from + (target - from) * eased);
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(step);
+}
+
+// ============================================================
+// STARFIELD
+// ============================================================
+function createStarfield() {
+  var container = document.getElementById('starfield');
+  for (var i = 0; i < 120; i++) {
+    var star = document.createElement('div');
+    star.className = 'star';
+    var size = Math.random() * 2 + 0.5;
+    star.style.width = size + 'px';
+    star.style.height = size + 'px';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
+    star.style.animationDelay = (Math.random() * 3) + 's';
+    container.appendChild(star);
+  }
+}
+
+// ============================================================
+// PARTICLES (canvas engine)
+// ============================================================
+var particleField = { canvas: null, ctx: null, dots: [], lastTs: 0 };
+
+function createParticles() {
+  var canvas = document.getElementById('particles');
+  if (!canvas || !canvas.getContext) return;
+  particleField.canvas = canvas;
+  particleField.ctx = canvas.getContext('2d');
+  resizeParticleCanvas();
+  window.addEventListener('resize', resizeParticleCanvas);
+  seedParticles();
+  requestAnimationFrame(stepParticles);
+}
+
+function resizeParticleCanvas() {
+  var canvas = particleField.canvas;
+  if (!canvas) return;
+  var dpr = window.devicePixelRatio || 1;
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  if (particleField.ctx) particleField.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function seedParticles() {
+  // Weighted toward cyan so the field reads as the system colour.
+  var palette = ['34,211,238', '34,211,238', '59,130,246', '251,191,36'];
+  var dots = [];
+  for (var i = 0; i < 46; i++) {
+    dots.push({
+      x: Math.random(),
+      y: Math.random(),
+      r: Math.random() * 2.2 + 0.6,
+      speed: (Math.random() * 0.5 + 0.15) / 1000,   // screen-heights per ms
+      alpha: Math.random() * 0.5 + 0.12,
+      rgb: palette[Math.floor(Math.random() * palette.length)],
+      wobble: Math.random() * Math.PI * 2,
+      wobbleAmount: Math.random() * 0.02 + 0.004
+    });
+  }
+  particleField.dots = dots;
+}
+
+// Detonate a ring of short-lived dots at the centre of the viewport — used by
+// Cast Ultimate. They fly outward and fade, then splice themselves out.
+function burstParticles() {
+  var dots = particleField.dots;
+  if (!dots) return;
+  for (var i = 0; i < 80; i++) {
+    var angle = Math.random() * Math.PI * 2;
+    var speed = 0.25 + Math.random() * 0.85;
+    dots.push({
+      x: 0.5,
+      y: 0.5,
+      r: 1 + Math.random() * 3,
+      speed: 0,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      alpha: 1,
+      decay: 0.010 + Math.random() * 0.022,
+      rgb: Math.random() < 0.65 ? '139,92,246' : '34,211,238',
+      wobble: 0,
+      wobbleAmount: 0,
+      burst: true
+    });
+  }
+}
+
+function stepParticles(ts) {
+  var canvas = particleField.canvas;
+  var ctx = particleField.ctx;
+  if (!canvas || !ctx) return;
+
+  var dt = particleField.lastTs ? Math.min(ts - particleField.lastTs, 50) : 16;
+  particleField.lastTs = ts;
+
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+  ctx.clearRect(0, 0, w, h);
+
+  var dots = particleField.dots;
+  // Iterate backwards so burst dots can splice themselves out mid-loop.
+  for (var i = dots.length - 1; i >= 0; i--) {
+    var p = dots[i];
+
+    if (p.burst) {
+      p.x += p.vx * (dt / 1000);
+      p.y += p.vy * (dt / 1000);
+      p.alpha -= p.decay * (dt / 16);
+      if (p.alpha <= 0 || p.x < -0.15 || p.x > 1.15 || p.y < -0.15 || p.y > 1.15) {
+        dots.splice(i, 1);
+        continue;
+      }
+    } else {
+      p.y -= p.speed * dt;                  // upward drift
+      if (p.y < -0.05) p.y = 1.05;          // wrap back to the bottom edge
+    }
+
+    var x = (p.x + Math.sin(ts / 2200 + p.wobble) * p.wobbleAmount) * w;
+    var y = p.y * h;
+
+    // Soft glow halo, then the bright core. Cheaper than shadowBlur per dot.
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(' + p.rgb + ',' + (p.alpha * 0.28).toFixed(3) + ')';
+    ctx.arc(x, y, p.r * 2.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(' + p.rgb + ',' + p.alpha.toFixed(3) + ')';
+    ctx.arc(x, y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  requestAnimationFrame(stepParticles);
+}
+
+// ============================================================
+// CONFETTI
+// ============================================================
+function fireConfetti() {
+  if (typeof confetti === 'undefined') return;
+  var colors = ['#22D3EE', '#3B82F6', '#FBBF24', '#10B981', '#EF4444'];
+  confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 }, colors: colors });
+  setTimeout(function () {
+    confetti({ particleCount: 30, angle: 60, spread: 55, origin: { x: 0 }, colors: colors });
+    confetti({ particleCount: 30, angle: 120, spread: 55, origin: { x: 1 }, colors: colors });
+  }, 200);
+}
+
+// ============================================================
+// LEVEL UP CINEMATIC
+// ============================================================
+function showLevelUp(level) {
+  // Never stack two overlays if several levels land in one action.
+  dismissLevelUp();
+
+  var flash = document.createElement('div');
+  flash.className = 'level-up-flash';
+  flash.setAttribute('role', 'dialog');
+  flash.setAttribute('aria-modal', 'true');
+  flash.setAttribute('aria-label', 'Level up');
+  flash.innerHTML =
+    '<div class="level-up-text">LEVEL UP!</div>' +
+    '<div class="level-up-sub">RANK ASCENDED &mdash; LEVEL ' + level + '</div>' +
+    '<div class="level-up-rank">' + rankFor(level) + '-RANK HUNTER</div>' +
+    '<button type="button" class="level-up-confirm" id="levelUpConfirm">Continue Ascension</button>';
+  document.body.appendChild(flash);
+
+  // Haptic pulse where the device supports it.
+  if (navigator.vibrate) navigator.vibrate([40, 60, 120]);
+
+  var confirm = document.getElementById('levelUpConfirm');
+  if (confirm) confirm.focus();
+
+  flash.addEventListener('click', function (e) {
+    if (e.target === flash || e.target.id === 'levelUpConfirm') dismissLevelUp();
+  });
+  document.addEventListener('keydown', levelUpKeyHandler);
+}
+
+function levelUpKeyHandler(e) {
+  if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') dismissLevelUp();
+}
+
+function dismissLevelUp() {
+  var flash = document.querySelector('.level-up-flash');
+  if (flash) flash.remove();
+  document.removeEventListener('keydown', levelUpKeyHandler);
+}
+
+// ============================================================
+// RENDER FUNCTIONS
+// ============================================================
+function setMeter(id, value, max) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var pct = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
+  el.style.width = (pct * 100).toFixed(1) + '%';
+}
+
+var RANKS = ['E', 'D', 'C', 'B', 'A', 'S'];
+
+/// A new rank every five levels, capped at S.
+function rankFor(level) {
+  return RANKS[Math.min(RANKS.length - 1, Math.floor((level - 1) / 5))];
+}
+
+function renderHeader() {
+  var hero = getHero(state.hero || 'monarch');
+  document.getElementById('headerAvatar').src = getHeroAvatarUrl(hero);
+  document.getElementById('headerAura').style.background = 'radial-gradient(circle, ' + hero.auraColor + ', transparent)';
+  rollUpNumber(document.getElementById('levelDisplay'), state.level);
+  document.getElementById('rankDisplay').textContent = rankFor(state.level) + '-RANK';
+  document.getElementById('hpDisplay').textContent = state.hp + '/' + state.hpMax;
+  document.getElementById('mpDisplay').textContent = state.mp + '/' + state.mpMax;
+  document.getElementById('xpDisplay').textContent = state.xp + '/' + state.xpMax;
+  rollUpNumber(document.getElementById('goldDisplay'), state.gold);
+  setMeter('hpMeter', state.hp, state.hpMax);
+  setMeter('mpMeter', state.mp, state.mpMax);
+  setMeter('xpMeter', state.xp, state.xpMax);
+}
+
+function renderHabits() {
+  var list = document.getElementById('habitsList');
+  if (!state.habits || state.habits.length === 0) { list.innerHTML = '<p class="text-xs text-center py-4" style="color:#64748B;">No habits yet.</p>'; return; }
+  list.innerHTML = state.habits.map(function (h, i) {
+    return '<div class="glass-card card-enter flex items-center justify-between" style="padding: 0.75rem; animation-delay:' + (i * 50) + 'ms;">' +
+      '<div class="flex items-center gap-3"><span class="text-lg">' + (h.icon || '⭐') + '</span><span class="text-sm" style="color:#E2E8F0;">' + escapeHtml(h.name) + '</span><span class="text-xs" style="color:#FBBF24;">🔥 ' + h.streak + '</span></div>' +
+      '<div class="flex items-center gap-2"><button class="btn-red" style="padding: 0.3rem 0.7rem; font-size:0.6rem;" onclick="breakHabit(' + i + ')">−</button><button class="btn-green" style="padding: 0.3rem 0.7rem; font-size:0.6rem;" onclick="completeHabit(' + i + ')">+</button></div></div>';
+  }).join('');
+}
+
+function renderDailies() {
+  var list = document.getElementById('dailiesList');
+  if (!state.dailies || state.dailies.length === 0) { list.innerHTML = '<p class="text-xs text-center py-4" style="color:#64748B;">No dailies yet.</p>'; return; }
+  list.innerHTML = state.dailies.map(function (d, i) {
+    return '<div class="glass-card card-enter flex items-center justify-between" style="padding: 0.75rem; animation-delay:' + (i * 50) + 'ms;">' +
+      '<div class="flex items-center gap-3"><input type="checkbox" class="checkbox-sl" ' + (d.done ? 'checked' : '') + ' onchange="toggleDaily(' + i + ')"><span class="text-sm ' + (d.done ? 'line-through' : '') + '" style="color:' + (d.done ? '#64748B' : '#E2E8F0') + ';">' + escapeHtml(d.name) + '</span></div>' +
+      '<span class="text-xs" style="color:#22D3EE;">+20 XP</span></div>';
+  }).join('');
+}
+
+function renderTodos() {
+  var list = document.getElementById('todosList');
+  if (!state.todos || state.todos.length === 0) { list.innerHTML = '<p class="text-xs text-center py-4" style="color:#64748B;">No todos yet.</p>'; return; }
+  list.innerHTML = state.todos.map(function (t, i) {
+    return '<div class="glass-card card-enter flex items-center justify-between" style="padding: 0.75rem; animation-delay:' + (i * 50) + 'ms;">' +
+      '<div class="flex items-center gap-3"><input type="checkbox" class="checkbox-sl" ' + (t.done ? 'checked' : '') + ' onchange="toggleTodo(' + i + ')"><span class="text-sm ' + (t.done ? 'line-through' : '') + '" style="color:' + (t.done ? '#64748B' : '#E2E8F0') + ';">' + escapeHtml(t.name) + '</span></div>' +
+      '<span class="text-xs" style="color:#FBBF24;">+50 XP</span></div>';
+  }).join('');
+}
+
+function statBarsHtml(hero) {
+  return STAT_AXES.map(function (s) {
+    var v = hero[s.key] || 0;
+    return '<div><div class="flex justify-between mb-0.5">' +
+      '<span class="font-orbitron text-[0.3rem] tracking-widest" style="color:' + s.color + ';">' + s.label + '</span>' +
+      '<span class="text-[0.6rem] number-roll" style="color:#E2E8F0;">' + v + '</span></div>' +
+      '<div class="stat-bar"><div class="stat-bar-fill" style="width:' + v + '%; background: linear-gradient(90deg, ' + s.color + ', ' + s.color + 'cc);"></div></div></div>';
+  }).join('');
+}
+
+function renderLegends() {
+  var grid = document.getElementById('legendsGrid');
+  grid.innerHTML = HEROES.map(function (hero, idx) {
+    var selected = (state.hero || 'monarch') === hero.id ? 'selected' : '';
+    return '<div class="glass-card card-enter cursor-pointer ' + selected + '" style="animation-delay:' + (idx * 80) + 'ms; border-color:' + (selected ? '#FBBF24' : 'rgba(34,211,238,0.2)') + ';" onclick="selectHero(&quot;' + hero.id + '&quot;)">' +
+      '<div class="flex items-start gap-4"><div class="relative flex-shrink-0">' +
+      '<div style="position:absolute; inset:-10px; border-radius:50%; background:radial-gradient(circle, ' + hero.auraColor + ', transparent); animation: aura-pulse 2.5s ease-in-out infinite alternate;"></div>' +
+      '<img src="' + getHeroAvatarUrl(hero) + '" class="hero-avatar w-16 h-16 relative z-10" style="--aura-color: ' + hero.auraColor + ';">' +
+      '<div class="avatar-glow-ring" style="--aura-color: ' + hero.auraColor + ';"></div></div>' +
+      '<div class="flex-1"><h3 class="font-orbitron text-[0.5rem] font-bold tracking-widest mb-1" style="color:#FBBF24;">' + hero.name + '</h3>' +
+      '<p class="text-xs mb-2 italic" style="color:#64748B;">"' + hero.tagline + '"</p>' +
+      '<p class="text-xs mb-2" style="color:#22D3EE;">&#9876; ' + hero.skill + '</p>' +
+      '<div class="space-y-2">' + statBarsHtml(hero) +
+      '</div></div></div></div>';
+  }).join('');
+}
+
+function renderCharacter() {
+  var hero = getHero(state.hero || 'monarch');
+  document.getElementById('charAvatar').src = getHeroAvatarUrl(hero);
+  document.getElementById('heroNameDisplay').textContent = hero.name;
+  document.getElementById('heroTaglineDisplay').textContent = hero.tagline;
+  setStat('Str', hero.str);
+  setStat('Agi', hero.agi);
+  setStat('Int', hero.int);
+  setStat('Per', hero.per);
+  setStat('Cre', hero.cre);
+  document.getElementById('equipHelmet').textContent = hero.equipment.helmet;
+  document.getElementById('equipShield').textContent = hero.equipment.shield;
+  document.getElementById('equipWeapon').textContent = hero.equipment.weapon;
+  document.getElementById('equipPotion').textContent = hero.equipment.potion;
+  drawRadar(hero);
+  drawXpTrend();
+}
+
+function setStat(name, value) {
+  var valEl = document.getElementById('stat' + name + 'Val');
+  var barEl = document.getElementById('stat' + name + 'Bar');
+  if (valEl) rollUpNumber(valEl, value);
+  if (barEl) barEl.style.width = value + '%';
+}
+
+// ============================================================
+// CHARTS — hand-drawn on Canvas 2D, no chart library
+// ============================================================
+var STAT_AXES = [
+  { key: 'str', label: 'STR', color: '#EF4444' },
+  { key: 'agi', label: 'AGI', color: '#10B981' },
+  { key: 'int', label: 'INT', color: '#22D3EE' },
+  { key: 'per', label: 'PER', color: '#FBBF24' },
+  { key: 'cre', label: 'CRE', color: '#8B5CF6' }
+];
+
+/// Size a canvas to its CSS box at device pixel ratio and return a scaled 2D
+/// context. Returns null while the panel is hidden (clientWidth is 0) — the
+/// chart is redrawn when the Character tab is opened.
+function prepareCanvas(canvas) {
+  if (!canvas) return null;
+  var cssW = canvas.clientWidth;
+  if (!cssW) return null;
+  var dpr = window.devicePixelRatio || 1;
+  var cssH = Math.round(cssW * 0.66);
+  canvas.style.height = cssH + 'px';
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+  return { ctx: ctx, w: cssW, h: cssH };
+}
+
+function drawRadar(hero) {
+  var c = prepareCanvas(document.getElementById('radarChart'));
+  if (!c) return;
+  var ctx = c.ctx, w = c.w, h = c.h;
+  var cx = w / 2, cy = h / 2 + 4;
+  var radius = Math.min(w, h) * 0.33;
+  var n = STAT_AXES.length;
+  var i, angle, x, y, v;
+
+  // Grid rings
+  ctx.strokeStyle = 'rgba(34,211,238,0.14)';
+  ctx.lineWidth = 1;
+  for (var ring = 1; ring <= 4; ring++) {
+    ctx.beginPath();
+    for (i = 0; i < n; i++) {
+      angle = -Math.PI / 2 + (i * 2 * Math.PI / n);
+      x = cx + Math.cos(angle) * radius * (ring / 4);
+      y = cy + Math.sin(angle) * radius * (ring / 4);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+  // Spokes
+  for (i = 0; i < n; i++) {
+    angle = -Math.PI / 2 + (i * 2 * Math.PI / n);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+    ctx.stroke();
+  }
+
+  // Stat polygon
+  ctx.beginPath();
+  for (i = 0; i < n; i++) {
+    angle = -Math.PI / 2 + (i * 2 * Math.PI / n);
+    v = Math.max(0, Math.min(100, hero[STAT_AXES[i].key] || 0)) / 100;
+    x = cx + Math.cos(angle) * radius * v;
+    y = cy + Math.sin(angle) * radius * v;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  var grad = ctx.createLinearGradient(cx - radius, cy - radius, cx + radius, cy + radius);
+  grad.addColorStop(0, 'rgba(34,211,238,0.45)');
+  grad.addColorStop(1, 'rgba(139,92,246,0.35)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#22D3EE';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Vertices and axis labels
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (i = 0; i < n; i++) {
+    angle = -Math.PI / 2 + (i * 2 * Math.PI / n);
+    var raw = hero[STAT_AXES[i].key] || 0;
+    v = Math.max(0, Math.min(100, raw)) / 100;
+    x = cx + Math.cos(angle) * radius * v;
+    y = cy + Math.sin(angle) * radius * v;
+    ctx.beginPath();
+    ctx.fillStyle = '#22D3EE';
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    var lx = cx + Math.cos(angle) * (radius + 26);
+    var ly = cy + Math.sin(angle) * (radius + 20);
+    ctx.font = '600 11px Orbitron, sans-serif';
+    ctx.fillStyle = STAT_AXES[i].color;
+    ctx.fillText(STAT_AXES[i].label, lx, ly);
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillStyle = '#64748B';
+    ctx.fillText(String(raw), lx, ly + 13);
+  }
+
+  var legend = document.getElementById('radarLegend');
+  if (legend) {
+    legend.innerHTML = STAT_AXES.map(function (s) {
+      return '<span><i class="chart-dot" style="background:' + s.color + ';"></i>' +
+        s.label + ' ' + (hero[s.key] || 0) + '</span>';
+    }).join('');
+  }
+}
+
+function last7Days() {
+  var out = [], now = new Date();
+  for (var i = 6; i >= 0; i--) out.push(new Date(now.getTime() - i * 86400000));
+  return out;
+}
+
+function drawXpTrend() {
+  var c = prepareCanvas(document.getElementById('xpTrendChart'));
+  if (!c) return;
+  var ctx = c.ctx, w = c.w, h = c.h;
+  var padL = 36, padR = 14, padT = 16, padB = 30;
+  var plotW = w - padL - padR;
+  var plotH = h - padT - padB;
+
+  var days = last7Days();
+  var ledger = state.xpByDay || {};
+  var values = days.map(function (d) { return ledger[isoDay(d)] || 0; });
+
+  var target = 120;                                  // daily XP target
+  var maxV = Math.max(target, Math.max.apply(null, values.concat([50])));
+  var xAt = function (i) { return padL + (plotW * i) / 6; };
+  var yAt = function (v) { return padT + plotH - (plotH * v) / maxV; };
+
+  // Grid + y-axis labels
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillStyle = '#64748B';
+  ctx.font = '10px Inter, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (var g = 0; g <= 4; g++) {
+    var gv = (maxV / 4) * g;
+    var gy = yAt(gv);
+    ctx.beginPath();
+    ctx.moveTo(padL, gy);
+    ctx.lineTo(w - padR, gy);
+    ctx.stroke();
+    ctx.fillText(String(Math.round(gv)), padL - 6, gy);
+  }
+
+  // Daily target line
+  ctx.save();
+  ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = 'rgba(251,191,36,0.55)';
+  ctx.beginPath();
+  ctx.moveTo(padL, yAt(target));
+  ctx.lineTo(w - padR, yAt(target));
+  ctx.stroke();
+  ctx.restore();
+
+  // Area under the line
+  ctx.beginPath();
+  ctx.moveTo(xAt(0), yAt(0));
+  for (var i = 0; i < values.length; i++) ctx.lineTo(xAt(i), yAt(values[i]));
+  ctx.lineTo(xAt(values.length - 1), yAt(0));
+  ctx.closePath();
+  var area = ctx.createLinearGradient(0, padT, 0, padT + plotH);
+  area.addColorStop(0, 'rgba(34,211,238,0.45)');
+  area.addColorStop(1, 'rgba(34,211,238,0.02)');
+  ctx.fillStyle = area;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  for (var j = 0; j < values.length; j++) {
+    if (j === 0) ctx.moveTo(xAt(j), yAt(values[j]));
+    else ctx.lineTo(xAt(j), yAt(values[j]));
+  }
+  ctx.strokeStyle = '#22D3EE';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Points + weekday labels
+  var initials = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (var k = 0; k < values.length; k++) {
+    var px = xAt(k), py = yAt(values[k]);
+    ctx.beginPath();
+    ctx.fillStyle = '#050508';
+    ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.fillStyle = '#22D3EE';
+    ctx.arc(px, py, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#64748B';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillText(initials[days[k].getDay()], px, padT + plotH + 8);
+  }
+}
+
+function renderBoss() {
+  var pct = Math.max(0, (state.bossHp / state.bossHpMax) * 100);
+  document.getElementById('bossHpFill').style.width = pct + '%';
+  document.getElementById('bossHpText').textContent = Math.max(0, state.bossHp) + ' / ' + state.bossHpMax + ' HP';
+  var btn = document.getElementById('castUltimateBtn');
+  var defeatText = document.getElementById('bossDefeatText');
+  if (state.bossDefeated || state.bossHp <= 0) { defeatText.classList.remove('hidden'); btn.disabled = true; btn.style.opacity = '0.4'; }
+  else { defeatText.classList.add('hidden'); btn.disabled = false; btn.style.opacity = '1'; }
+}
+
+function renderParty() {
+  var list = document.getElementById('partyList');
+  list.innerHTML = PARTY.map(function (member) {
+    var isSelected = member.id === (state.hero || 'monarch');
+    return '<div class="glass-card flex items-center gap-3" style="padding: 0.75rem;' + (isSelected ? ' border-color:' + member.auraColor + ';' : '') + '">' +
+      '<div class="relative"><img src="' + getHeroAvatarUrl(member) + '" class="hero-avatar w-10 h-10" style="--aura-color: ' + member.auraColor + ';"><div class="avatar-glow-ring" style="--aura-color: ' + member.auraColor + ';"></div></div>' +
+      '<div class="flex-1"><p class="text-sm ' + (isSelected ? 'font-semibold' : '') + '" style="color:' + (isSelected ? '#FBBF24' : '#E2E8F0') + ';">' + escapeHtml(member.name) + '</p>' +
+      '<p class="text-xs" style="color:#64748B;">' + escapeHtml(member.role) + '</p></div>' +
+      (isSelected ? '<span class="font-orbitron text-[0.35rem] font-bold tracking-widest" style="color:#FBBF24;">★ ACTIVE</span>' : '') + '</div>';
+  }).join('');
+}
+
+function renderAll() { renderHeader(); renderHabits(); renderDailies(); renderTodos(); renderLegends(); renderCharacter(); renderBoss(); renderParty(); }
+
+// ============================================================
+// TAB NAVIGATION
+// ============================================================
+function switchTab(tabId) {
+  var panels = document.querySelectorAll('.tab-content');
+  for (var i = 0; i < panels.length; i++) panels[i].classList.remove('active');
+  var buttons = document.querySelectorAll('.tab-btn');
+  for (var j = 0; j < buttons.length; j++) buttons[j].classList.remove('active');
+  var panel = document.getElementById('tab-' + tabId);
+  if (panel) panel.classList.add('active');
+  var btn = document.querySelector('.tab-btn[data-tab="' + tabId + '"]');
+  if (btn) btn.classList.add('active');
+  // The charts size themselves from their CSS box, which only exists once the
+  // panel is displayed — so redraw on entry rather than at boot.
+  if (tabId === 'character') renderCharacter();
+}
+
+// ============================================================
+// SCORING HELPERS
+// ============================================================
+/// Award XP and record it in the daily ledger that feeds the trend chart.
+function addXp(amount) {
+  state.xp += amount;
+  state.xpByDay = state.xpByDay || {};
+  var key = isoDay(new Date());
+  state.xpByDay[key] = (state.xpByDay[key] || 0) + amount;
+  checkLevelUp();
+}
+
+/// Deal damage to the raid boss and pay the kill bounty once.
+function damageBoss(amount) {
+  state.bossHp = Math.max(0, state.bossHp - amount);
+  if (state.bossHp <= 0 && !state.bossDefeated) {
+    state.bossDefeated = true;
+    state.gold += 500;
+  }
+}
+
+/// Non-blocking system message. Replaces alert(), which froze the page.
+function flashSystemMessage(text) {
+  var el = document.createElement('div');
+  el.className = 'system-toast';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(function () { el.remove(); }, 2200);
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function addHabit() { var input = document.getElementById('newHabitInput'); var name = input.value.trim(); if (!name) return; state.habits.push({ id: Date.now(), name: name, icon: '⭐', streak: 0 }); input.value = ''; saveState(); renderHabits(); }
+function completeHabit(index) { var habit = state.habits[index]; if (!habit) return; habit.streak++; addXp(10); state.gold += 2; damageBoss(200); fireConfetti(); saveState(); renderHeader(); renderHabits(); }
+function breakHabit(index) { var habit = state.habits[index]; if (!habit) return; habit.streak = Math.max(0, habit.streak - 1); saveState(); renderHabits(); }
+function addDaily() { var input = document.getElementById('newDailyInput'); var name = input.value.trim(); if (!name) return; state.dailies.push({ id: Date.now(), name: name, done: false, xp: 10 }); input.value = ''; saveState(); renderDailies(); }
+function toggleDaily(index) {
+  var daily = state.dailies[index];
+  if (!daily) return;
+  if (!daily.done) {
+    daily.done = true;
+    addXp(20);
+    state.gold += 5;
+    damageBoss(500);
+    fireConfetti();
+  } else {
+    daily.done = false;
+    state.xp = Math.max(0, state.xp - 20);
+    state.gold = Math.max(0, state.gold - 5);
+    state.bossHp = Math.min(state.bossHpMax, state.bossHp + 500);
+  }
+  saveState(); renderHeader(); renderDailies(); renderBoss();
+}
+function addTodo() { var input = document.getElementById('newTodoInput'); var name = input.value.trim(); if (!name) return; state.todos.push({ id: Date.now(), name: name, done: false, xp: 20 }); input.value = ''; saveState(); renderTodos(); }
+function toggleTodo(index) {
+  var todo = state.todos[index];
+  if (!todo) return;
+  if (!todo.done) {
+    todo.done = true;
+    addXp(50);
+    state.gold += 15;
+    damageBoss(1000);
+    fireConfetti();
+  } else {
+    todo.done = false;
+    state.xp = Math.max(0, state.xp - 50);
+    state.gold = Math.max(0, state.gold - 15);
+    state.bossHp = Math.min(state.bossHpMax, state.bossHp + 1000);
+  }
+  saveState(); renderHeader(); renderTodos(); renderBoss();
+}
+function selectHero(heroId) { state.hero = heroId; saveState(); renderHeader(); renderLegends(); renderCharacter(); renderParty(); fireConfetti(); }
+function castUltimate() {
+  if (state.bossDefeated || state.bossHp <= 0) return;
+  if (state.mp < 10) { flashSystemMessage('Insufficient mana — 10 MP required'); return; }
+  state.mp -= 10;
+  damageBoss(1500);
+  burstParticles();
+  fireConfetti();
+  saveState(); renderHeader(); renderBoss();
+}
+function reviveBoss() { state.bossHp = state.bossHpMax; state.bossDefeated = false; saveState(); renderBoss(); }
+function checkLevelUp() {
+  var leveled = false;
+  while (state.xp >= state.xpMax) {
+    state.xp -= state.xpMax;
+    state.level++;
+    state.xpMax = Math.floor(state.xpMax * 1.3);
+    state.hpMax += 10; state.hp = state.hpMax;
+    state.mpMax += 5; state.mp = state.mpMax;
+    leveled = true;
+  }
+  // Fire once, after the loop, so a multi-level jump shows a single cinematic.
+  if (leveled) showLevelUp(state.level);
+}
+function resetDemoData() { localStorage.removeItem('momentumState'); seedData(); state = loadState(); renderAll(); }
+function escapeHtml(str) { var div = document.createElement('div'); div.appendChild(document.createTextNode(String(str))); return div.innerHTML; }
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', function () {
+  createStarfield();
+  createParticles();
+  renderAll();
+
+  // Keep the charts correct across viewport changes while they are on screen.
+  window.addEventListener('resize', function () {
+    if (document.getElementById('tab-character').classList.contains('active')) {
+      drawRadar(getHero(state.hero || 'monarch'));
+      drawXpTrend();
+    }
+  });
+});
+
+// Avatars are remote SVGs. If one fails (offline, rate-limited, a style param
+// the API rejects) swap in the plain seeded avatar for that same hero instead
+// of leaving a broken-image icon. `error` does not bubble, so this has to
+// listen in the capture phase.
+document.addEventListener('error', function (e) {
+  var img = e.target;
+  if (!img || img.tagName !== 'IMG' || img.dataset.fallback) return;
+  var pending = img.getAttribute('src');
+  if (!pending || pending.trim() === '') return;   // nothing was requested yet
+  img.dataset.fallback = '1';
+  var match = /[?&]seed=([^&]+)/.exec(img.getAttribute('src') || '');
+  var seed = match ? decodeURIComponent(match[1]) : (img.alt || 'Hero');
+  img.src = 'https://api.dicebear.com/7.x/adventurer/svg?seed=' +
+    encodeURIComponent(seed) + '&backgroundColor=050508';
+}, true);
+</script>
+
+</body>
+</html>
