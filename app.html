@@ -21,6 +21,29 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Tailwind CDN resilience. The Play CDN is a runtime dependency: if it never
+   delivers, every utility class is inert. That is not only a styling problem —
+   it is a layout break. The avatar aura is `position:absolute; inset:-8px`, so
+   its containing block is the nearest positioned ancestor, and the HUD wrapper
+   gets that from a Tailwind `.relative` class. With the CDN gone there is no
+   positioned ancestor, the containing block falls back to the viewport, and the
+   aura paints a full-screen oval over the page. Probe for a generated utility
+   and flag the document so the fallbacks in <style> engage. */
+(function () {
+  function probe() {
+    var el = document.createElement('div');
+    el.className = 'grid';
+    el.style.position = 'absolute';
+    el.style.left = '-9999px';
+    document.body.appendChild(el);
+    var loaded = getComputedStyle(el).display === 'grid';
+    el.parentNode.removeChild(el);
+    if (!loaded) document.documentElement.classList.add('no-tw');
+  }
+  window.addEventListener('load', function () { setTimeout(probe, 1200); });
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script>
 tailwind.config = {
@@ -167,6 +190,18 @@ nav[aria-label="Sections"] { padding-left: 1rem !important; padding-right: 1rem 
   main { max-width: 2560px !important; }
   .tab-content, .hud-header { font-size: 1.05rem; }
 }
+
+/* === Tailwind CDN fallbacks ===
+   Inert unless the inline probe added .no-tw to <html> (CDN never delivered).
+   Keeps the panels in columns instead of collapsing to one unstyled stack.
+   Scoped to .no-tw so these rules can never fight the real utilities. */
+.no-tw .grid-fallback { display: flex; flex-direction: column; gap: 1.5rem; }
+@media (min-width: 768px) {
+  .no-tw .grid-fallback { flex-direction: row; flex-wrap: wrap; }
+  .no-tw .grid-fallback > * { flex: 1 1 17rem; }
+}
+.no-tw .flex-fallback { display: flex; flex-wrap: wrap; gap: .75rem; }
+.no-tw #hud > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
 
 /* === BACKDROP === */
 .sl-bg {
@@ -319,6 +354,21 @@ html[data-theme="light"] .tab-btn { background: rgba(255, 255, 255, .6); }
 .tab-btn .tab-key { opacity: .45; font-size: .5rem; margin-right: .25rem; }
 
 /* === HERO AVATAR === */
+/* .avatar-wrap carries the positioning context for the glows. It used to be a
+   Tailwind `.relative` class, which meant the aura's containing block silently
+   depended on the CDN: no CDN, no positioned ancestor, so `inset:-8px` resolved
+   against the viewport and the aura covered the whole page. Declared in CSS, the
+   glow's geometry no longer depends on the network. */
+.avatar-wrap { position: relative; display: inline-block; line-height: 0; }
+/* Contain the decorative glows. inset:-8px/-6px sizes them to their parent + 8/6px,
+   so a correct wrapper already bounds them; the caps are the backstop for a
+   mis-resolved containing block. 300px is far above any legitimate glow (the HUD
+   avatar is 40px, the character sheet 64px). */
+.hero-aura, .avatar-glow-ring, [class*="aura"] {
+  max-width: 300px !important;
+  max-height: 300px !important;
+  pointer-events: none !important;
+}
 .hero-avatar { filter: drop-shadow(0 0 20px var(--aura-color, rgba(var(--primary-rgb), .6))); border: 3px solid var(--aura-color, var(--primary)); border-radius: 50%; padding: 4px; background: rgba(0, 0, 0, .5); }
 .avatar-glow-ring { position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--aura-color, var(--primary)); animation: ring-rotate 8s linear infinite; pointer-events: none; }
 .hero-aura { position: absolute; inset: -8px; border-radius: 50%; filter: blur(6px); pointer-events: none; animation: aura-pulse 2.5s ease-in-out infinite alternate; }
@@ -473,7 +523,7 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
   <div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
     <div class="flex items-center gap-3">
       <img src="./icons/icon.svg" alt="MOMENTUM" width="34" height="34" class="w-[34px] h-[34px] block flex-shrink-0" style="display:block; width:34px; height:34px;" loading="eager">
-      <div class="relative">
+      <div class="avatar-wrap">
         <div class="hero-aura" id="headerAura"></div>
         <img id="headerAvatar" alt="Your hunter avatar" class="hero-avatar w-10 h-10" width="40" height="40">
         <div class="avatar-glow-ring" id="headerRing"></div>
@@ -610,7 +660,7 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
         <span class="text-[0.6rem] muted" id="legendsSummary">8 archetypes · 1 active</span>
       </div>
       <p class="text-xs mb-4 muted">Choose your hunter. The header, the character sheet and the raid party all follow.</p>
-      <div id="legendsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+      <div id="legendsGrid" class="grid grid-fallback grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"></div>
     </div>
   </section>
 
@@ -630,7 +680,7 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
       <div class="glass-card is-static p-6">
         <h2 class="section-title mb-4">Hunter</h2>
         <div class="flex items-center gap-4 mb-4">
-          <div class="relative">
+          <div class="avatar-wrap">
             <img id="charAvatar" alt="Selected hunter avatar" class="hero-avatar w-16 h-16" width="64" height="64">
             <div class="avatar-glow-ring" id="charRing"></div>
           </div>
@@ -695,7 +745,7 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
         <button class="btn-sl btn-icon" data-ach-filter="locked">Locked</button>
         <button class="btn-sl btn-icon" data-ach-filter="legendary">Legendary</button>
       </div>
-      <div id="achievementsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+      <div id="achievementsGrid" class="grid grid-fallback grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
     </div>
   </section>
 
@@ -735,7 +785,7 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
           <button class="btn-sl btn-icon btn-green" id="btnExportCsv">Export CSV</button>
         </div>
       </div>
-      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6" id="metricsGrid"></div>
+      <div class="grid grid-fallback grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6" id="metricsGrid"></div>
       <div class="glass-card is-static p-4 mb-4">
         <h3 class="section-title mb-3">XP · last 30 days</h3>
         <canvas id="xp30Chart" class="chart-canvas" width="900" height="320" role="img" aria-label="XP earned over the last 30 days"></canvas>
@@ -836,7 +886,7 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
         </div>
       </div>
       <p class="text-xs mb-4 muted">Local profiles only &mdash; every hunter lives on this device.</p>
-      <div id="aliasList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" role="list"></div>
+      <div id="aliasList" class="grid grid-fallback grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" role="list"></div>
     </div>
   </section>
 

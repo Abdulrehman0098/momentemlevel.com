@@ -161,7 +161,7 @@ body {
   pointer-events: none; z-index: -3; max-width: 100%;
   animation: blob-drift 16s ease-in-out infinite alternate;
 }
-section { overflow-x: clip; }
+section { position: relative !important; overflow: hidden !important; }
 
 /* === Tailwind CDN fallbacks ===
    Inert unless the inline probe added .no-tw to <html> (CDN never delivered).
@@ -267,14 +267,31 @@ section { overflow-x: clip; }
 /* Hero avatar: hard-capped at 220x220 so a large intrinsic SVG (dicebear ships
    512px source art) can never blow the hero out. `width: var(--hero-size)` still
    wins below the cap — 190px desktop / 120px mobile — and the ring, the aura and
-   the float animation all keep working. */
+   the float animation all keep working.
+
+   `position: relative` here is load-bearing, not decoration: .hero-aura is
+   `position:absolute; inset:-8px`, so its containing block is the nearest
+   positioned ancestor. Without this the ancestor is a Tailwind `.relative`
+   class, and if the Tailwind CDN never delivers there is no positioned ancestor
+   at all — the containing block falls back to the viewport and the 762-unit
+   aura paints a full-screen oval over the page. Declaring it in CSS removes the
+   CDN as a dependency for the avatar's geometry. */
 .hero-main-wrap {
-position: relative !important;
+  position: relative;
   width: var(--hero-size, 190px);
+  height: var(--hero-size, 190px);
   max-width: 220px !important;
   max-height: 220px !important;
   aspect-ratio: 1 / 1 !important;
   margin: 0 auto;
+}
+/* Aura/ring containment. inset:-8px/-6px sizes these to their parent + 8/6px, so
+   a correct containing block already bounds them; the caps are the belt to that
+   braces — even a mis-resolved containing block cannot push them past 220px. */
+.hero-aura, .hero-avatar-ring {
+  max-width: 220px !important;
+  max-height: 220px !important;
+  pointer-events: none !important;
 }
 .hero-avatar-ring {
   position: absolute; inset: -6px; border-radius: 50%;
