@@ -3139,7 +3139,13 @@ function wireAvatarFallback() {
     img.dataset.fallback = '1';
     const match = /[?&]seed=([^&]+)/.exec(src);
     const seed = match ? decodeURIComponent(match[1]) : (img.alt || 'Hero');
-    img.src = 'https://api.dicebear.com/7.x/adventurer/svg?seed=' + encodeURIComponent(seed) + '&backgroundColor=050508';
+    /* `size=` is not cosmetic: without it dicebear returns
+       <svg viewBox="0 0 762 762"> with NO width/height, so an <img> that has no
+       CSS sizing of its own falls back to the intrinsic default and the 762-unit
+       artwork expands to fill whatever box holds it. With size= dicebear emits
+       width/height, so the SVG always carries an intrinsic size. */
+    img.src = 'https://api.dicebear.com/7.x/adventurer/svg?seed=' + encodeURIComponent(seed) +
+      '&backgroundColor=050508&size=256';
   }, true);
 }
 
