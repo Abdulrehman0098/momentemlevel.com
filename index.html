@@ -27,6 +27,26 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
+/* Tailwind CDN resilience. The Play CDN is a runtime dependency: if it never
+   delivers, every utility class is inert and the page collapses to one unstyled
+   column. Probe for a generated utility and, if it is missing, flag the document
+   so the fallbacks in <style> engage. Runs after load so a slow-but-successful
+   CDN is not misread as a failure. */
+(function () {
+  function probe() {
+    var el = document.createElement('div');
+    el.className = 'grid';
+    el.style.position = 'absolute';
+    el.style.left = '-9999px';
+    document.body.appendChild(el);
+    var loaded = getComputedStyle(el).display === 'grid';
+    el.parentNode.removeChild(el);
+    if (!loaded) document.documentElement.classList.add('no-tw');
+  }
+  window.addEventListener('load', function () { setTimeout(probe, 1200); });
+})();
+</script>
+<script>
 tailwind.config = {
   theme: {
     extend: {
@@ -130,8 +150,29 @@ body {
 @keyframes scanline-sweep { 0% { top: -140px; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
 
 /* blob + float */
-.blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .5; pointer-events: none; animation: blob-drift 16s ease-in-out infinite alternate; }
+/* z-index -3 puts the glow behind the section's content: an absolutely
+   positioned element with z-index:auto paints above normal-flow text in the
+   same stacking context, so without this the blobs sit on top of the headline.
+   max-width:100% resolves against the section, so a blob can never be wider
+   than the box that clips it (100vw would include the scrollbar and reintroduce
+   bleed). `overflow:hidden` is deliberately not set — the blob is childless. */
+.blob {
+  position: absolute; border-radius: 50%; filter: blur(70px); opacity: .5;
+  pointer-events: none; z-index: -3; max-width: 100%;
+  animation: blob-drift 16s ease-in-out infinite alternate;
+}
 section { overflow-x: clip; }
+
+/* === Tailwind CDN fallbacks ===
+   Inert unless the inline probe added .no-tw to <html> (CDN never delivered).
+   Keeps content in columns instead of collapsing to one unstyled stack.
+   Scoped to .no-tw so these rules can never fight the real utilities. */
+.no-tw .grid-fallback { display: flex; flex-direction: column; gap: 1.5rem; }
+@media (min-width: 768px) {
+  .no-tw .grid-fallback { flex-direction: row; flex-wrap: wrap; }
+  .no-tw .grid-fallback > * { flex: 1 1 17rem; }
+}
+.no-tw .flex-fallback { display: flex; flex-wrap: wrap; gap: .75rem; }
 @keyframes blob-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(30px, -40px, 0) scale(1.15); } }
 .float-slow { animation: float-slow 6s ease-in-out infinite; }
 @keyframes float-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
@@ -425,7 +466,7 @@ section { overflow-x: clip; }
              alt="Shadow Monarch avatar" width="190" height="190" class="hero-avatar-img w-full h-auto relative z-10" style="--aura:rgba(139,92,246,.6)">
         <div class="hero-avatar-ring" style="--aura:rgba(139,92,246,.6)"></div>
       </div>
-      <div class="grid grid-cols-3 gap-2 sm:gap-4 mt-8 sm:mt-10 max-w-[300px] sm:max-w-[420px] mx-auto" id="heroMini"></div>
+      <div class="grid grid-fallback grid-cols-3 gap-2 sm:gap-4 mt-8 sm:mt-10 max-w-[300px] sm:max-w-[420px] mx-auto" id="heroMini"></div>
     </div>
   </div>
 </section>
@@ -462,7 +503,7 @@ section { overflow-x: clip; }
       <h2 class="section-title mb-3" data-i18n="features.title">Six systems, one loop</h2>
       <p class="lead text-sm max-w-[62ch] mx-auto">Every tab is wired to the same state: complete something, and the HUD, the charts and the boss all move.</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="featureGrid"></div>
+    <div class="grid grid-fallback grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="featureGrid"></div>
   </div>
 </section>
 
@@ -519,7 +560,7 @@ section { overflow-x: clip; }
       <p class="text-center text-[0.65rem] muted mb-8">
         Illustrative figures for this build — replace with real telemetry before a public launch.
       </p>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center" id="statBand"></div>
+      <div class="grid grid-fallback grid-cols-2 lg:grid-cols-4 gap-8 text-center" id="statBand"></div>
     </div>
   </div>
 </section>
@@ -532,7 +573,7 @@ section { overflow-x: clip; }
       <h2 class="section-title mb-3">What testers said</h2>
       <p class="lead text-sm max-w-[58ch] mx-auto">Composite feedback from early test builds. Names are pseudonymous.</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="testimonialGrid"></div>
+    <div class="grid grid-fallback grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="testimonialGrid"></div>
   </div>
 </section>
 
@@ -544,7 +585,7 @@ section { overflow-x: clip; }
       <h2 class="section-title mb-3" data-i18n="pricing.title">Free forever, or unlock the extras</h2>
       <p class="lead text-sm max-w-[58ch] mx-auto">The core loop is free and unlimited. Paid tiers add cosmetics and cloud sync when it ships.</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start" id="pricingGrid"></div>
+    <div class="grid grid-fallback grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start" id="pricingGrid"></div>
     <p class="text-center text-[0.7rem] muted mt-6">Prices are placeholders for this build. Checkout is not wired up.</p>
   </div>
 </section>
