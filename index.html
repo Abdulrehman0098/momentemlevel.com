@@ -71,6 +71,16 @@ tailwind.config = {
   --r-btn: 10px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
+/* Global overflow guard: a remote SVG (dicebear), an inline chart or the starfield
+   canvas can never push the document wider than the viewport, even if it arrives
+   with an unexpected intrinsic size. `height: auto` is scoped to replaced elements
+   only — canvas/particles and SVG background art set an explicit height, and
+   forcing auto on them would collapse them. */
+img, svg, canvas { max-width: 100% !important; height: auto !important; }
+/* The full-bleed backdrops are position:fixed inset:0 with no intrinsic height —
+   `height: auto` would collapse them to 0. Re-assert their real height. */
+.sl-bg, .starfield, .scanline-container { height: 100% !important; }
+canvas.particles { height: 100vh !important; }
 html { scroll-behavior: smooth; scroll-padding-top: 90px; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body {
   touch-action: manipulation;
@@ -213,7 +223,17 @@ section { overflow-x: clip; }
   background: linear-gradient(120deg, #E2E8F0 12%, var(--primary) 58%, var(--secondary) 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.hero-main-wrap { width: var(--hero-size, 190px); max-width: 100%; margin: 0 auto; }
+/* Hero avatar: hard-capped at 220x220 so a large intrinsic SVG (dicebear ships
+   512px source art) can never blow the hero out. `width: var(--hero-size)` still
+   wins below the cap — 190px desktop / 120px mobile — and the ring, the aura and
+   the float animation all keep working. */
+.hero-main-wrap {
+  width: var(--hero-size, 190px);
+  max-width: 220px !important;
+  max-height: 220px !important;
+  aspect-ratio: 1 / 1 !important;
+  margin: 0 auto;
+}
 .hero-avatar-ring {
   position: absolute; inset: -6px; border-radius: 50%;
   border: 2px solid var(--aura, var(--primary)); animation: ring-rotate 8s linear infinite;
@@ -224,10 +244,24 @@ section { overflow-x: clip; }
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity .6s cubic-bezier(.25,.46,.45,.94), transform .6s cubic-bezier(.25,.46,.45,.94); }
 .reveal.in { opacity: 1; transform: none; }
 
-.demo-frame-wrap { position: relative; overflow: hidden; border-radius: var(--r-card); -webkit-overflow-scrolling: touch; }
+/* Live demo: the wrapper is the clipping box, so its width is capped (never the
+   viewport) and it is centred as a block. Height stays fluid — the inline
+   height:min(78vh,760px) and the mobile 600px override are deliberate, and a fixed
+   750px would clip the embedded app on a phone. */
+.demo-frame-wrap {
+  position: relative; overflow: hidden; border-radius: var(--r-card);
+  width: 100% !important;
+  max-width: 1246px !important;
+  margin: 0 auto !important;
+  display: block !important;
+  -webkit-overflow-scrolling: touch;
+}
 /* Promote the frame to its own layer so panning it does not re-rasterise
    the landing page. `will-change` only — a transform here would clobber the
    scale(.75) from .demo-frame, since an ID outranks a class. */
+/* #demoFrame: no width/height here. .demo-frame's 133.333% + scale(.75) is what
+   fits the 1600px app column into the wrapper, and an ID-level `width: 100%` would
+   silently break it. */
 #demoFrame { will-change: transform; }
 .demo-frame {
   width: 133.333%; height: 133.333%; border: 0; display: block;

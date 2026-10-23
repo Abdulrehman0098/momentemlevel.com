@@ -97,6 +97,9 @@ html[data-theme="light"] {
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+img, svg, canvas { max-width: 100% !important; height: auto !important; }
+.sl-bg, .starfield, .scanline-container { height: 100% !important; }
+canvas.particles { height: 100vh !important; }
 html { scroll-behavior: smooth; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body {
   touch-action: manipulation;
@@ -120,6 +123,50 @@ body {
   text-size-adjust: 100%;
 }
 body.no-scroll { overflow: hidden; }
+
+/* === APP CONTAINER SYSTEM ===
+   Every column in the app (header, 12-tab strip, tab panels, footer) carries the
+   same cap + auto margins, so the layout is centred and identical edge-to-edge at
+   every width. No fixed pixel widths anywhere: a narrow window shrinks the grid,
+   a wide one expands it. The 1600px cap is the app's design column; above it the
+   content stays centred with symmetric gutters (TV included). */
+#hud > div,
+nav[aria-label="Sections"],
+#main-content,
+footer,
+main {
+  width: 100% !important;
+  max-width: 1600px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+#main-content { padding: 1rem .75rem 1.5rem !important; }
+nav[aria-label="Sections"] { padding-left: 1rem !important; padding-right: 1rem !important; }
+#hud > div { padding-left: .75rem !important; padding-right: .75rem !important; }
+@media (min-width: 768px) {
+  #main-content { padding: 1.5rem 1rem 2rem !important; }
+  nav[aria-label="Sections"], #hud > div { padding-left: 1rem !important; padding-right: 1rem !important; }
+}
+/* Task A.3: on a TV / large desktop the 1600px column sits as a narrow strip in a
+   huge panel — everything renders at laptop size with metres of dead space either
+   side. Grow the column with the panel (floor of 1600px) and scale the display
+   type, so a 4K screen actually looks designed for 4K. */
+@media (min-width: 1920px) {
+  #hud > div,
+  nav[aria-label="Sections"],
+  #main-content,
+  footer,
+  main { max-width: 1920px !important; }
+}
+@media (min-width: 2560px) {
+  #hud > div,
+  nav[aria-label="Sections"],
+  #main-content,
+  footer,
+  main { max-width: 2560px !important; }
+  .tab-content, .hud-header { font-size: 1.05rem; }
+}
 
 /* === BACKDROP === */
 .sl-bg {
