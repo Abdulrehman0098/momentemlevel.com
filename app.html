@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MOMENTUM">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="app.webmanifest">
+<link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
 <link rel="alternate icon" type="image/png" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
@@ -120,7 +120,7 @@ html[data-theme="light"] {
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-img, svg, canvas { max-width: 100% !important; height: auto !important; }
+img, svg, canvas { max-width: 100% !important; }
 .sl-bg, .starfield, .scanline-container { height: 100% !important; }
 canvas.particles { height: 100vh !important; }
 html { scroll-behavior: smooth; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -1207,7 +1207,7 @@ function applyZoom() {
   root.style.transform = 'scale(' + z + ')';
   root.style.transformOrigin = 'top left';
   root.style.width = 'calc(100% / ' + z + ')';
-  root.style.height = 'calc(100% / ' + z + ')';
+  root.style.height = 'auto';
   const readout = $('zoomReadout');
   if (readout) readout.textContent = prefs.zoom + '%';
   const range = $('zoomRange'), label = $('zoomRangeValue');
