@@ -99,7 +99,7 @@ tailwind.config = {
 /* Responsive media guard. Height is NOT forced to auto globally: SVG icons with
    a viewBox but no intrinsic width/height would resolve to the browser default
    300x150 box and squash to a wrong aspect ratio. Icons below opt out. */
-img, svg, canvas { max-width: 100% !important; }
+img, svg, canvas { max-width: 100% !important; } header img, .site-nav img, .site-footer img { width: 34px !important; height: 34px !important; max-width: 34px !important; max-height: 34px !important; flex-shrink: 0 !important; object-fit: contain !important; }
 img:not([class*="hero-"]) { height: auto; }
 svg { height: auto; }
 canvas { height: auto; }
