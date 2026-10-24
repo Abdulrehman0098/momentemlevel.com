@@ -568,6 +568,13 @@ section { position: relative !important; overflow: hidden !important; }
 @media (min-width: 1024px) { .lg\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; } .lg\:grid-cols-\[1\.05fr_\.95fr\] { grid-template-columns: 1.05fr 0.95fr !important; } }
 .demo-frame-wrap { width: 100% !important; max-width: 1246px !important; margin: 0 auto !important; height: auto !important; aspect-ratio: 16 / 9 !important; position: relative !important; overflow: hidden !important; }
 .demo-frame { width: 100% !important; height: 100% !important; transform: none !important; position: absolute !important; top: 0 !important; left: 0 !important; }
+/* --- MOBILE AURA CONTAINMENT --- */
+@media (max-width: 768px) {
+  .hero-main-wrap { position: relative !important; width: 140px !important; height: 140px !important; margin: 0 auto !important; }
+  .hero-main-wrap, .relative, .avatar-wrap { position: relative !important; display: inline-block !important; }
+  .hero-aura, .hero-avatar-ring, [class*="aura"] { max-width: 160px !important; max-height: 160px !important; pointer-events: none !important; }
+  body, section { overflow-x: clip !important; }
+}
 </style>
 </head>
 <body>
