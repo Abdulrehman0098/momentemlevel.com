@@ -450,6 +450,16 @@ html.no-js .card-enter { opacity: 1 !important; transform: none !important; }
   #heroAvatars > .grid { max-width: 240px; gap: .5rem; margin-top: 1.25rem; }
 }
 </style>
+/* === MANUAL OVERRIDES TO FIX LIVE SITE LAYOUT === */
+img, svg, canvas { max-width: 100% !important; }
+header img, .site-nav img, .site-footer img { width: 34px !important; height: 34px !important; max-width: 34px !important; max-height: 34px !important; flex-shrink: 0 !important; object-fit: contain !important; }
+section { position: relative !important; overflow: hidden !important; } 
+.blob { max-width: 100% !important; max-height: 100% !important; } 
+.hero-main-wrap, .avatar-wrap, .showcase-card > div, .relative { position: relative !important; display: inline-block !important; } 
+.hero-aura, .hero-avatar-ring, .avatar-ring-sm, [class*="aura"] { position: absolute !important; top: -10px !important; bottom: -10px !important; left: -10px !important; right: -10px !important; max-width: calc(100% + 20px) !important; max-height: calc(100% + 20px) !important; pointer-events: none !important; border-radius: 50% !important; } 
+.demo-frame-wrap { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9 !important; position: relative !important; overflow: hidden !important; } 
+.demo-frame { width: 100% !important; height: 100% !important; transform: none !important; position: absolute !important; top: 0 !important; left: 0 !important; }
+/* ================================================= */
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
