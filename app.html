@@ -3333,7 +3333,7 @@ function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   if (!/^https?:$/.test(location.protocol)) return;   /* file:// has no SW scope */
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
+    navigator.serviceWorker.register('./sw.js?v=2').catch((err) => {
       console.warn('Momentum: service worker not registered.', err);
     });
   });
