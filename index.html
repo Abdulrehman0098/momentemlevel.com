@@ -575,6 +575,26 @@ section { position: relative !important; overflow: hidden !important; }
   .hero-aura, .hero-avatar-ring, [class*="aura"] { max-width: 160px !important; max-height: 160px !important; pointer-events: none !important; }
   body, section { overflow-x: clip !important; }
 }
+/* --- MOBILE AURA CONTAINMENT FIX --- */
+@media (max-width: 768px) {
+  .hero-main-wrap {
+    position: relative !important;
+    width: 160px !important;
+    height: 160px !important;
+    max-width: 160px !important;
+    max-height: 160px !important;
+    margin: 0 auto !important;
+    overflow: hidden !important;
+  }
+  .hero-aura, .hero-avatar-ring {
+    max-width: 170px !important;
+    max-height: 170px !important;
+    inset: -4px !important;
+  }
+  body, section, header {
+    overflow-x: hidden !important;
+  }
+}
 </style>
 </head>
 <body>

@@ -623,6 +623,20 @@ label.btn-sl:focus-within { outline: 2px solid var(--primary); outline-offset: 2
   .hero-aura, .avatar-ring, [class*="aura"] { max-width: 120px !important; max-height: 120px !important; pointer-events: none !important; }
   header, .hud-header, main { overflow-x: clip !important; }
 }
+/* --- MOBILE AURA CONTAINMENT FIX --- */
+@media (max-width: 768px) {
+  .hero-aura, .avatar-ring, [class*="aura"] {
+    max-width: 240px !important;
+    max-height: 240px !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+  }
+  header, .hud-header, .app-header, main {
+    position: relative !important;
+    overflow-x: hidden !important;
+  }
+}
 </style>
 </head>
 <body>
